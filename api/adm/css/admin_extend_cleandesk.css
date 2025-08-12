@@ -1,0 +1,48 @@
+@charset "utf-8";
+
+#logo{background:#2f409f;height:100%;float:left;width:210px;padding:0 0 0 0;text-align:center}
+#gnb .gnb_oparea{display:none;position:absolute;top:0;left:0px;background:#fff;height:100%;width:210px;padding:20px;border-right:1px solid #dbdbdb;
+-webkit-box-shadow: 2px 0 2px  rgba(150,150,150,100.1);
+   -moz-box-shadow: 2px 0 2px  rgba(150,150,150,0.1);
+        box-shadow: 2px 0 2px  rgba(150,150,150,0.1);}
+#container{padding:0 0 0 210px;margin-top:100px;height:100%;background:#fff;min-width:1200px;}
+#container_title{position:fixed;top:60px;left:0;width:100%;line-height:50px;font-size:1.5em;padding:0 20px;padding-left:230px;border-bottom:1px solid #ddd;background:#fff;z-index:99}
+
+
+.local_ov02 {position:relative; margin: 10px 0; height:30px;}
+.local_ov02 .l_div {width:500px; float:left;}
+.local_ov02 .r_div {float:right;}
+
+.btn_fixed_bottom {height:30px; float:right; padding:10px 0 0}
+
+.mb_form {width:200px;}
+
+.width_180 {width:180px;}
+.width_185 {width:185px;}
+.width_350 {width:350px;}
+.width_400 {width:400px;}
+.width_600 {width:600px;}
+.width_800 {width:800px;}
+
+
+.local_sch11{}
+
+.local_sch11 .btn_sch{width:30px;height:30px;border:0;padding:0;float:left;background:url(../img/sch_btn.png) no-repeat 50% 50%;border:1px solid #dcdcdc;border-left:0;text-indent:-999px;overflow:hidden}
+.local_sch11 .btn_sch2{width:35px;height:35px;border:0;padding:0;background:url(../img/sch_btn.png) no-repeat 50% 50% #eee;border:1px solid #dcdcdc;text-indent:-999px;overflow:hidden}
+
+.local_sch11 .sch_input{height:30px;border:1px solid #dcdcdc;border-right:0;;padding:0 5px;float:left;}
+.local_sch11 select{height:30px;margin-right:3px;border:1px solid #dcdcdc}
+.local_sch11 div{margin:5px 0; float:center;}
+
+
+
+.pop-layer {background-color:#fff;border-radius:10px 10px 10px 10px;box-shadow:0 0 25px 5px #999;color:#111;display:none;min-width:450px;padding:25px}
+/*
+.pop-layer {position:fixed; left: 100px; top:100px; width:300px; height:200px; background-color:red;}
+#popup {color:#2b91af;font:bold 325% 'Petrona',sans}
+*/
+.pop-layer {min-height:250px}
+
+.popup_container{ float:left; width: 600px; }
+
+.td_left {text-align:left;}
