@@ -9,11 +9,14 @@ include_once(dirname(__FILE__) .'/pbkdf2.compat.php');
 **
 *************************************************************************/
 
-// 마이크로 타임을 얻어 계산 형식으로 만듦
+/**
+ * 마이크로타임을 반환
+ * @return float
+ * @deprecated use `microtime(true)`
+ */
 function get_microtime()
 {
-    list($usec, $sec) = explode(" ",microtime());
-    return ((float)$usec + (float)$sec);
+    return microtime(true);
 }
 
 
@@ -23,6 +26,7 @@ function get_paging($write_pages, $cur_page, $total_page, $url, $add="")
     //$url = preg_replace('#&amp;page=[0-9]*(&amp;page=)$#', '$1', $url);
     $url = preg_replace('#(&amp;)?page=[0-9]*#', '', $url);
 	$url .= substr($url, -1) === '?' ? 'page=' : '&amp;page=';
+    $url = preg_replace('|[^\w\-~+_.?#=!&;,/:%@$\|*\'()\[\]\\x80-\\xff]|i', '', clean_xss_tags($url));
 
     $str = '';
     if ($cur_page > 1) {
@@ -96,6 +100,12 @@ function print_r2($var)
 // header("location:URL") 을 대체
 function goto_url($url)
 {
+    run_event('goto_url', $url);
+
+    if (function_exists('safe_filter_url_host')) {
+        $url = safe_filter_url_host($url);
+    }
+
     $url = str_replace("&amp;", "&", $url);
     //echo "<script> location.replace('$url'); </script>";
 
@@ -144,11 +154,17 @@ function get_session($session_name)
 
 
 // 쿠키변수 생성
-function set_cookie($cookie_name, $value, $expire)
+function set_cookie($cookie_name, $value, $expire, $path='/', $domain=G5_COOKIE_DOMAIN, $secure=false, $httponly=true)
 {
     global $g5;
+    
+    $c = run_replace('set_cookie_params', array('path'=>$path, 'domain'=>$domain, 'secure'=>$secure, 'httponly'=>$httponly), $cookie_name);
+    
+    if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] != 'off') {
+        $c['secure'] = true;
+    }
 
-    setcookie(md5($cookie_name), base64_encode($value), G5_SERVER_TIME + $expire, '/', G5_COOKIE_DOMAIN);
+    setcookie(md5($cookie_name), base64_encode($value), G5_SERVER_TIME + $expire, $c['path'], $c['domain'], $c['secure'], $c['httponly']);
 }
 
 
@@ -169,6 +185,10 @@ function alert($msg='', $url='', $error=true, $post=false)
     global $g5, $config, $member, $is_member, $is_admin, $board;
 
     run_event('alert', $msg, $url, $error, $post);
+
+    if (function_exists('safe_filter_url_host')) {
+        $url = safe_filter_url_host($url);
+    }
 
     $msg = $msg ? strip_tags($msg, '<br>') : '올바른 방법으로 이용해 주십시오.';
 
@@ -208,6 +228,12 @@ function confirm($msg, $url1='', $url2='', $url3='')
         alert($msg);
     }
 
+    if (function_exists('safe_filter_url_host')) {
+        $url1 = safe_filter_url_host($url1);
+        $url2 = safe_filter_url_host($url2);
+        $url3 = safe_filter_url_host($url3);
+    }
+
     if(!trim($url1) || !trim($url2)) {
         $msg = '$url1 과 $url2 를 지정해 주세요.';
         alert($msg);
@@ -231,7 +257,13 @@ function url_auto_link($str)
 {
     global $g5;
     global $config;
-
+    
+    if ($replace_str = run_replace('url_auto_link_before', '', $str)) {
+        return $replace_str;
+    }
+    
+    $ori_str = $str;
+    
     // 140326 유창화님 제안코드로 수정
     // http://sir.kr/pg_lecture/461
     // http://sir.kr/pg_lecture/463
@@ -264,17 +296,17 @@ function url_auto_link($str)
     $str = preg_replace("/\t_gt_\t/", "&gt;", $str);
     */
 
-    return run_replace('url_auto_link', $str);
+    return run_replace('url_auto_link', $str, $ori_str);
 }
 
 
 // url에 http:// 를 붙인다
-function set_http($url)
+function set_http($url, $protocol="http://")
 {
     if (!trim($url)) return;
 
     if (!preg_match("/^(http|https|ftp|telnet|news|mms)\:\/\//i", $url))
-        $url = "http://" . $url;
+        $url = $protocol. $url;
 
     return $url;
 }
@@ -295,6 +327,30 @@ function get_filesize($size)
     return $size;
 }
 
+// 파일다운로드 링크 생성시 nonce 키 추가, 7200은 2시간동안 유효
+function download_file_nonce_key($bo_table, $wr_id, $timeoutSeconds=7200)
+{
+    $secret = get_token_encryption_key(sha1($bo_table.session_id().$wr_id));
+    $salt = get_random_token_string(10);
+    $maxTime = G5_SERVER_TIME + $timeoutSeconds;
+    $nonce = $salt . '|' . $maxTime . '|' . sha1($salt . $secret . $maxTime);
+
+    return $nonce;
+}
+
+// 파일다운로드시 nonce key를 체크한다.
+function download_file_nonce_is_valid($nonce, $bo_table, $wr_id)
+{
+    if (! is_string($nonce)) return false;
+    $secret = get_token_encryption_key(sha1($bo_table.session_id().$wr_id));
+    $a = explode('|', $nonce);
+    if (count($a) !== 3) return false;
+    list($salt, $maxTime, $hash) = $a;
+    if (sha1($salt . $secret . $maxTime) !== $hash) return false;
+    if (G5_SERVER_TIME > (int) $maxTime) return false;
+
+    return true;
+}
 
 // 게시글에 첨부된 파일을 얻는다. (배열로 반환)
 function get_file($bo_table, $wr_id)
@@ -304,11 +360,12 @@ function get_file($bo_table, $wr_id)
     $file['count'] = 0;
     $sql = " select * from {$g5['board_file_table']} where bo_table = '$bo_table' and wr_id = '$wr_id' order by bf_no ";
     $result = sql_query($sql);
+    $nonce = download_file_nonce_key($bo_table, $wr_id);
     while ($row = sql_fetch_array($result))
     {
         $no = (int) $row['bf_no'];
         $bf_content = $row['bf_content'] ? html_purifier($row['bf_content']) : '';
-        $file[$no]['href'] = G5_BBS_URL."/download.php?bo_table=$bo_table&amp;wr_id=$wr_id&amp;no=$no" . $qstr;
+        $file[$no]['href'] = G5_BBS_URL."/download.php?bo_table=$bo_table&amp;wr_id=$wr_id&amp;no=$no&amp;nonce=$nonce" . $qstr;
         $file[$no]['download'] = $row['bf_download'];
         // 4.00.11 - 파일 path 추가
         $file[$no]['path'] = G5_DATA_URL.'/file/'.$bo_table;
@@ -572,44 +629,74 @@ function check_html_link_nofollow($type=''){
     return true;
 }
 
-// http://htmlpurifier.org/
-// Standards-Compliant HTML Filtering
-// Safe  : HTML Purifier defeats XSS with an audited whitelist
-// Clean : HTML Purifier ensures standards-compliant output
-// Open  : HTML Purifier is open-source and highly customizable
+/**
+ * HTMLPurifier 필터를 거친 HTML 코드를 반환
+ * 
+ * http://htmlpurifier.org/
+ * Standards-Compliant HTML Filtering
+ * Safe  : HTML Purifier defeats XSS with an audited whitelist
+ * Clean : HTML Purifier ensures standards-compliant output
+ * Open  : HTML Purifier is open-source and highly customizable
+ *
+ * @param string $html
+ * @return string
+ */
 function html_purifier($html)
 {
-    $f = file(G5_PLUGIN_PATH.'/htmlpurifier/safeiframe.txt');
+    global $is_admin, $write;
+
+    $f = file(G5_PLUGIN_PATH . '/htmlpurifier/safeiframe.txt');
     $domains = array();
-    foreach($f as $domain){
+    foreach ($f as $domain) {
         // 첫행이 # 이면 주석 처리
         if (!preg_match("/^#/", $domain)) {
             $domain = trim($domain);
-            if ($domain)
+            if ($domain) {
                 array_push($domains, $domain);
+            }
         }
     }
-    // 내 도메인도 추가
-    array_push($domains, $_SERVER['HTTP_HOST'].'/');
-    $safeiframe = implode('|', $domains);
+    // 글쓴이가 관리자인 경우에만 현재 사이트 도메인을 허용
+    if (isset($write['mb_id']) && $write['mb_id'] && is_admin($write['mb_id'])) {
+        array_push($domains, $_SERVER['HTTP_HOST'] . '/');
+    }
+    $safeiframe = implode('|', run_replace('html_purifier_safeiframes', $domains, $html));
 
-    include_once(G5_PLUGIN_PATH.'/htmlpurifier/HTMLPurifier.standalone.php');
-    include_once(G5_PLUGIN_PATH.'/htmlpurifier/extend.video.php');
+    include_once(G5_PLUGIN_PATH . '/htmlpurifier/HTMLPurifier.standalone.php');
+    include_once(G5_PLUGIN_PATH . '/htmlpurifier/extend.video.php');
+
     $config = HTMLPurifier_Config::createDefault();
     // data/cache 디렉토리에 CSS, HTML, URI 디렉토리 등을 만든다.
-    $config->set('Cache.SerializerPath', G5_DATA_PATH.'/cache');
+    $config->set('Cache.SerializerPath', G5_DATA_PATH . '/cache');
     $config->set('HTML.SafeEmbed', false);
     $config->set('HTML.SafeObject', false);
     $config->set('Output.FlashCompat', false);
     $config->set('HTML.SafeIframe', true);
-    if( (function_exists('check_html_link_nofollow') && check_html_link_nofollow('html_purifier')) ){
-        $config->set('HTML.Nofollow', true);    // rel=nofollow 으로 스팸유입을 줄임
+    if ((function_exists('check_html_link_nofollow') && check_html_link_nofollow('html_purifier'))) {
+        $config->set('HTML.Nofollow', true); // rel=nofollow 으로 스팸유입을 줄임
     }
-    $config->set('URI.SafeIframeRegexp','%^(https?:)?//('.$safeiframe.')%');
+    $config->set('URI.SafeIframeRegexp', '%^(https?:)?//(' . preg_replace('/\\\?\./', '\.', $safeiframe) . ')%');
     $config->set('Attr.AllowedFrameTargets', array('_blank'));
     //유튜브, 비메오 전체화면 가능하게 하기
     $config->set('Filter.Custom', array(new HTMLPurifier_Filter_Iframevideo()));
+
+    /*
+     * HTMLPurifier 설정을 변경할 수 있는 Event hook
+     * 리스너에서는 첫번째 인자($config)로 `HTMLPurifier_Config` 객체를 받을 수 있다
+     */
+    run_event('html_purifier_config', $config, array(
+        'html' => $html,
+        'write' => $write,
+        'is_admin' => $is_admin
+    )
+    );
+
+    // 커스텀 URI 필터 등록
+    $def = $config->getDefinition('URI', true); // URI 정의 가져오기
+    $def->addFilter(new HTMLPurifierContinueParamFilter(), $config); // 커스텀 필터 추가
+
     $purifier = new HTMLPurifier($config);
+
     return run_replace('html_purifier_result', $purifier->purify($html), $purifier, $html);
 }
 
@@ -649,7 +736,7 @@ function get_sql_search($search_ca_name, $search_field, $search_text, $search_op
     $tmp = explode(",", trim($search_field));
     $field = explode("||", $tmp[0]);
     $not_comment = "";
-    if (!empty($tmp[1]))
+    if (isset($tmp[1]))
         $not_comment = $tmp[1];
 
     $str .= "(";
@@ -705,8 +792,11 @@ function get_sql_search($search_ca_name, $search_field, $search_text, $search_op
         $op1 = " $search_operator ";
     }
     $str .= " ) ";
-    if ($not_comment)
+    if ($not_comment === '1') {
         $str .= " and wr_is_comment = '0' ";
+    } else if ($not_comment === '0') {
+        $str .= " and wr_is_comment = '1' ";
+    }
 
     return $str;
 }
@@ -737,7 +827,7 @@ function get_next_num($table)
     $sql = " select min(wr_num) as min_wr_num from $table ";
     $row = sql_fetch($sql);
     // 가장 작은 번호에 1을 빼서 넘겨줌
-    return (int)($row['min_wr_num'] - 1);
+    return isset($row['min_wr_num']) ? (int)($row['min_wr_num'] - 1) : -1;
 }
 
 
@@ -769,23 +859,33 @@ function get_group($gr_id, $is_cache=false)
 }
 
 
-// 회원 정보를 얻는다.
-function get_member($mb_id, $fields='*', $is_cache=false)
+/**
+ * 회원 정보를 얻는다
+ * 
+ * @param string $mb_id
+ * @param string $fields
+ * @param bool $is_cache
+ * 
+ * @return array
+ */
+function get_member($mb_id, $fields = '*', $is_cache = false)
 {
     global $g5;
-    
-    if (preg_match("/[^0-9a-z_]+/i", $mb_id))
+
+    $mb_id = trim($mb_id);
+    if (preg_match("/[^0-9a-z_]+/i", $mb_id)) {
         return array();
+    }
 
     static $cache = array();
 
     $key = md5($fields);
 
-    if( $is_cache && isset($cache[$mb_id]) && isset($cache[$mb_id][$key]) ){
+    if ($is_cache && isset($cache[$mb_id]) && isset($cache[$mb_id][$key])) {
         return $cache[$mb_id][$key];
     }
 
-    $sql = " select $fields from {$g5['member_table']} where mb_id = TRIM('$mb_id') ";
+    $sql = " SELECT {$fields} from {$g5['member_table']} where mb_id = '{$mb_id}' ";
 
     $cache[$mb_id][$key] = run_replace('get_member', sql_fetch($sql), $mb_id, $fields, $is_cache);
 
@@ -834,7 +934,10 @@ function subject_sort_link($col, $query_string='', $flag='asc')
     $arr_query[] = 'page='.$page;
     $qstr = implode("&amp;", $arr_query);
 
-    return "<a href=\"{$_SERVER['SCRIPT_NAME']}?{$qstr}\">";
+    parse_str(html_entity_decode($qstr), $qstr_array);
+    $url = short_url_clean(get_params_merge_url($qstr_array));
+
+    return '<a href="'.$url.'">';
 }
 
 
@@ -850,12 +953,14 @@ function get_admin($admin='super', $fields='*')
         $is = true;
     }
 
-    if (($is && !$mb['mb_id']) || $admin == 'group') {
+    // if (($is && !$mb['mb_id']) || $admin == 'group') {
+    if (($is && !isset($mb['mb_id'])) || $admin == 'group') {
         $mb = sql_fetch("select {$fields} from {$g5['member_table']} where mb_id in ('{$group['gr_admin']}') limit 1 ");
         $is = true;
     }
 
-    if (($is && !$mb['mb_id']) || $admin == 'super') {
+    // if (($is && !$mb['mb_id']) || $admin == 'super') {
+    if (($is && !isset($mb['mb_id'])) || $admin == 'super') {
         $mb = sql_fetch("select {$fields} from {$g5['member_table']} where mb_id in ('{$config['cf_admin']}') limit 1 ");
     }
 
@@ -1036,7 +1141,11 @@ function insert_point($mb_id, $point, $content='', $rel_table='', $rel_id='', $r
 function insert_use_point($mb_id, $point, $po_id='')
 {
     global $g5, $config;
-
+    
+    if ($replace_insert = run_replace('insert_use_point_before', '', $mb_id, $point, $po_id)) {
+        return $replace_insert;
+    }
+    
     if($config['cf_point_term'])
         $sql_order = " order by po_expire_date asc, po_id asc ";
     else
@@ -1252,6 +1361,10 @@ function delete_point($mb_id, $rel_table, $rel_id, $rel_action)
                       and po_rel_action = '$rel_action' ";
         $row = sql_fetch($sql);
 
+        if (! (isset($row['po_id']) && $row['po_id'])) {
+            return true;
+        }
+
         if(isset($row['po_point']) && $row['po_point'] < 0) {
             $mb_id = $row['mb_id'];
             $po_point = abs($row['po_point']);
@@ -1296,86 +1409,136 @@ function get_sideview($mb_id, $name='', $email='', $homepage='')
     global $g5;
     global $bo_table, $sca, $is_admin, $member;
 
-    $email = get_string_encrypt($email);
-    $homepage = set_http(clean_xss_tags($homepage));
+    static $cache = array();
 
-    $name     = get_text($name, 0, true);
-    $email    = get_text($email);
+    $name = get_text($name, 0, true);
+    $namekey = ($mb_id && $name) ? $mb_id."\t".$name : '';
+    
+    // id는 유니크하지만 닉네임 또는 이름은 변경이 가능하다
+    // name의 경우 비회원은 게시판에 동일한 이름을 등록할수 있다.
+    if ($namekey && isset($cache['idname:' . $namekey]) && $cache['idname:' . $namekey]) {
+        return $cache['idname:' . $namekey];
+    } else if (isset($cache['id:' . $mb_id]) && $cache['id:' . $mb_id]) {
+        return $cache['id:' . $mb_id];
+    }
+
+    $email = get_string_encrypt($email);
+    $email = get_text($email);
+
+    $homepage = set_http(clean_xss_tags($homepage));
     $homepage = get_text($homepage);
 
-    $tmp_name = "";
     $en_mb_id = $mb_id;
 
+    $name_tag = array();
+    $menus = array();
+
     if ($mb_id) {
-        //$tmp_name = "<a href=\"".G5_BBS_URL."/profile.php?mb_id=".$mb_id."\" class=\"sv_member\" title=\"$name 자기소개\" rel="nofollow" target=\"_blank\" onclick=\"return false;\">$name</a>";
-        $tmp_name = '<a href="'.G5_BBS_URL.'/profile.php?mb_id='.$mb_id.'" class="sv_member" title="'.$name.' 자기소개" target="_blank" rel="nofollow" onclick="return false;">';
+        // $tmp_name = "<a href=\"".G5_BBS_URL."/profile.php?mb_id=".$mb_id."\" class=\"sv_member\" title=\"$name 자기소개\" rel="nofollow" target=\"_blank\" onclick=\"return false;\">$name</a>";
+        $name_tag_open = '<a href="' . G5_BBS_URL . '/profile.php?mb_id=' . $mb_id . '" class="sv_member" title="' . $name . ' 자기소개" target="_blank" rel="nofollow" onclick="return false;">';
 
         if ($config['cf_use_member_icon']) {
-            $mb_dir = substr($mb_id,0,2);
-            $icon_file = G5_DATA_PATH.'/member/'.$mb_dir.'/'.get_mb_icon_name($mb_id).'.gif';
+            $mb_dir = substr($mb_id, 0, 2);
+            $icon_file = G5_DATA_PATH . '/member/' . $mb_dir . '/' . get_mb_icon_name($mb_id) . '.gif';
 
             if (file_exists($icon_file)) {
-                $icon_filemtile = (defined('G5_USE_MEMBER_IMAGE_FILETIME') && G5_USE_MEMBER_IMAGE_FILETIME) ? '?'.filemtime($icon_file) : '';
+                $icon_filemtile = (defined('G5_USE_MEMBER_IMAGE_FILETIME') && G5_USE_MEMBER_IMAGE_FILETIME) ? '?' . filemtime($icon_file) : '';
                 $width = $config['cf_member_icon_width'];
                 $height = $config['cf_member_icon_height'];
-                $icon_file_url = G5_DATA_URL.'/member/'.$mb_dir.'/'.get_mb_icon_name($mb_id).'.gif'.$icon_filemtile;
-                $tmp_name .= '<span class="profile_img"><img src="'.$icon_file_url.'" width="'.$width.'" height="'.$height.'" alt=""></span>';
+                $icon_file_url = G5_DATA_URL . '/member/' . $mb_dir . '/' . get_mb_icon_name($mb_id) . '.gif' . $icon_filemtile;
+                $name_tag['profile_image'] = '<span class="profile_img"><img src="' . $icon_file_url . '" width="' . $width . '" height="' . $height . '" alt=""></span>';
 
-                if ($config['cf_use_member_icon'] == 2) // 회원아이콘+이름
-                    $tmp_name = $tmp_name.' '.$name;
-            } else {
-                if( defined('G5_THEME_NO_PROFILE_IMG') ){
-                    $tmp_name .= G5_THEME_NO_PROFILE_IMG;
-                } else if( defined('G5_NO_PROFILE_IMG') ){
-                    $tmp_name .= G5_NO_PROFILE_IMG;
+                // 회원아이콘+이름
+                if ($config['cf_use_member_icon'] == 2) {
+                    $name_tag['name'] = $name;
                 }
-                if ($config['cf_use_member_icon'] == 2) // 회원아이콘+이름
-                    $tmp_name = $tmp_name.' '.$name;
+            } else {
+                if (defined('G5_THEME_NO_PROFILE_IMG')) {
+                    $name_tag['profile_image'] = G5_THEME_NO_PROFILE_IMG;
+                } else if (defined('G5_NO_PROFILE_IMG')) {
+                    $name_tag['profile_image'] = G5_NO_PROFILE_IMG;
+                }
+
+                // 회원아이콘+이름
+                if ($config['cf_use_member_icon'] == 2) {
+                    $name_tag['name'] = $name;
+                }
             }
         } else {
-            $tmp_name = $tmp_name.' '.$name;
+            $name_tag['name'] = $name;
         }
-        $tmp_name .= '</a>';
-
-        $title_mb_id = '['.$mb_id.']';
     } else {
-        if(!$bo_table)
+        if (!$bo_table) {
             return $name;
+        }
 
-        $tmp_name = '<a href="'.get_pretty_url($bo_table, '', 'sca='.$sca.'&amp;sfl=wr_name,1&amp;stx='.$name).'" title="'.$name.' 이름으로 검색" class="sv_guest" rel="nofollow" onclick="return false;">'.$name.'</a>';
-        $title_mb_id = '[비회원]';
+        $name_tag_open = '<a href="' . get_pretty_url($bo_table, '', 'sca=' . $sca . '&amp;sfl=wr_name,1&amp;stx=' . $name) . '" title="' . $name . ' 이름으로 검색" class="sv_guest" rel="nofollow" onclick="return false;">';
+        $name_tag['name'] = $name;
     }
 
-    $str = "<span class=\"sv_wrap\">\n";
-    $str .= $tmp_name."\n";
+    if ($mb_id) {
+        $menus['memo'] = '<a href="' . G5_BBS_URL . '/memo_form.php?me_recv_mb_id=' . $mb_id . '" rel="nofollow" onclick="win_memo(this.href); return false;">쪽지보내기</a>';
+    }
 
-    $str2 = "<span class=\"sv\">\n";
-    if($mb_id)
-        $str2 .= "<a href=\"".G5_BBS_URL."/memo_form.php?me_recv_mb_id=".$mb_id."\" onclick=\"win_memo(this.href); return false;\">쪽지보내기</a>\n";
-    if($email)
-        $str2 .= "<a href=\"".G5_BBS_URL."/formmail.php?mb_id=".$mb_id."&amp;name=".urlencode($name)."&amp;email=".$email."\" onclick=\"win_email(this.href); return false;\">메일보내기</a>\n";
-    if($homepage)
-        $str2 .= "<a href=\"".$homepage."\" target=\"_blank\">홈페이지</a>\n";
-    if($mb_id)
-        $str2 .= "<a href=\"".G5_BBS_URL."/profile.php?mb_id=".$mb_id."\" onclick=\"win_profile(this.href); return false;\">자기소개</a>\n";
-    if($bo_table) {
-        if($mb_id) {
-            $str2 .= "<a href=\"".get_pretty_url($bo_table, '', "sca=".$sca."&amp;sfl=mb_id,1&amp;stx=".$en_mb_id)."\">아이디로 검색</a>\n";
+    if ($email) {
+        $menus['email'] = '<a href="' . G5_BBS_URL . '/formmail.php?mb_id=' . $mb_id . '&amp;name=' . urlencode($name) . '&amp;email=' . $email . '" onclick="win_email(this.href); return false;" rel="nofollow">메일보내기</a>';
+    }
+
+    if ($homepage) {
+        $menus['homepage'] = '<a href="' . $homepage . '" rel="nofollow noopener" target="_blank">홈페이지</a>';
+    }
+
+    if ($mb_id) {
+        $menus['profile'] = '<a href="' . G5_BBS_URL . '/profile.php?mb_id=' . $mb_id . '" onclick="win_profile(this.href); return false;" rel="nofollow">자기소개</a>';
+    }
+
+    if ($bo_table) {
+        if ($mb_id) {
+            $menus['search_id'] = '<a href="' . get_pretty_url($bo_table, '', 'sca=' . $sca . '&amp;sfl=mb_id,1&amp;stx=' . $en_mb_id) . '" rel="nofollow">아이디로 검색</a>';
         } else {
-            $str2 .= "<a href=\"".get_pretty_url($bo_table, '', "sca=".$sca."&amp;sfl=wr_name,1&amp;stx=".$name)."\">이름으로 검색</a>\n";
+            $menus['search_name'] = '<a href="' . get_pretty_url($bo_table, '', 'sca=' . $sca . '&amp;sfl=wr_name,1&amp;stx=' . $name) . '" rel="nofollow">이름으로 검색</a>';
         }
     }
-    if($mb_id)
-        $str2 .= "<a href=\"".G5_BBS_URL."/new.php?mb_id=".$mb_id."\" class=\"link_new_page\" onclick=\"check_goto_new(this.href, event);\">전체게시물</a>\n";
-    if($is_admin == "super" && $mb_id) {
-        $str2 .= "<a href=\"".G5_ADMIN_URL."/member_form.php?w=u&amp;mb_id=".$mb_id."\" target=\"_blank\">회원정보변경</a>\n";
-        $str2 .= "<a href=\"".G5_ADMIN_URL."/point_list.php?sfl=mb_id&amp;stx=".$mb_id."\" target=\"_blank\">포인트내역</a>\n";
-    }
-    $str2 .= "</span>\n";
-    $str .= $str2;
-    $str .= "\n<noscript class=\"sv_nojs\">".$str2."</noscript>";
 
+    if ($mb_id) {
+        $menus['search_all'] = '<a href="' . G5_BBS_URL . '/new.php?mb_id=' . $mb_id . '" class="link_new_page" onclick="check_goto_new(this.href, event);" rel="nofollow">전체게시물</a>';
+
+        if ($is_admin == 'super') {
+            $menus['admin_member_modify'] = '<a href="' . G5_ADMIN_URL . '/member_form.php?w=u&amp;mb_id=' . $mb_id . '" target="_blank" rel="nofollow">회원정보변경</a>';
+            $menus['admin_member_point'] = '<a href="' . G5_ADMIN_URL . '/point_list.php?sfl=mb_id&amp;stx=' . $mb_id . '" target="_blank" rel="nofollow">포인트내역</a>';
+        }
+    }
+
+    $name_tag_close = '</a>';
+
+    $items = run_replace('member_sideview_items', array(
+        'name_tag_open' => $name_tag_open,
+        'name_tag_close' => $name_tag_close,
+        'name_tag' => $name_tag,
+        'menus' => $menus
+    ), array(
+            'mb_id' => $mb_id,
+            'name' => $name,
+            'bo_table' => $bo_table,
+        )
+    );
+
+    $str = '<span class="sv_wrap">';
+    $str .= $items['name_tag_open'] . implode(' ', $items['name_tag']) . $items['name_tag_close'];
+
+    $str2 = '<span class="sv">';
+    $str2 .= implode("\n", $items['menus']);
+    $str2 .= '</span>';
+
+    $str .= $str2;
+    $str .= '<noscript class="sv_nojs">' . $str2 . '</noscript>';
     $str .= "</span>";
+    
+    if ($namekey) {
+        $cache['idname:' . $namekey] = $str;
+    } else if ($mb_id && !$name) {
+        $cache['id:' . $mb_id] = $str;
+    }
 
     return $str;
 }
@@ -1509,7 +1672,7 @@ function hsc($str)
 // &nbsp; &amp; &middot; 등을 정상으로 출력
 function html_symbol($str)
 {
-    return preg_replace("/\&([a-z0-9]{1,20}|\#[0-9]{0,3});/i", "&#038;\\1;", $str);
+    return $str ? preg_replace("/\&([a-z0-9]{1,20}|\#[0-9]{0,3});/i", "&#038;\\1;", $str) : "";
 }
 
 
@@ -1525,14 +1688,18 @@ function sql_connect($host, $user, $pass, $db=G5_MYSQL_DB)
     global $g5;
 
     if(function_exists('mysqli_connect') && G5_MYSQLI_USE) {
-        $link = mysqli_connect($host, $user, $pass, $db);
+        mysqli_report(MYSQLI_REPORT_OFF);
+        $link = @mysqli_connect($host, $user, $pass, $db) or die('MySQL Host, User, Password, DB 정보에 오류가 있습니다.');
 
         // 연결 오류 발생 시 스크립트 종료
         if (mysqli_connect_errno()) {
             die('Connect Error: '.mysqli_connect_error());
         }
     } else {
-        $link = mysql_connect($host, $user, $pass);
+        if (!function_exists('mysql_connect')) {
+            die('MySQL이 설치되지 않아 mysql_connect 함수를 사용할 수 없습니다.');
+        }
+        $link = mysql_connect($host, $user, $pass) or die('MySQL Host, User, Password 정보에 오류가 있습니다.');
     }
 
     return $link;
@@ -1593,13 +1760,17 @@ function sql_query($sql, $error=G5_DISPLAY_SQL_ERROR, $link=null)
 
     $is_debug = get_permission_debug_show();
     
-    $start_time = $is_debug ? get_microtime() : 0;
+    $start_time = ($is_debug || G5_COLLECT_QUERY) ? get_microtime() : 0;
 
     if(function_exists('mysqli_query') && G5_MYSQLI_USE) {
         if ($error) {
             $result = @mysqli_query($link, $sql) or die("<p>$sql<p>" . mysqli_errno($link) . " : " .  mysqli_error($link) . "<p>error file : {$_SERVER['SCRIPT_NAME']}");
         } else {
-            $result = @mysqli_query($link, $sql);
+            try {
+                $result = @mysqli_query($link, $sql);
+            } catch (Exception $e) {
+                $result = null;
+            }
         }
     } else {
         if ($error) {
@@ -1609,18 +1780,68 @@ function sql_query($sql, $error=G5_DISPLAY_SQL_ERROR, $link=null)
         }
     }
 
-    $end_time = $is_debug ? get_microtime() : 0;
+    $end_time = ($is_debug || G5_COLLECT_QUERY) ? get_microtime() : 0;
 
-    if($result && $is_debug) {
-        // 여기에 실행한 sql문을 화면에 표시하는 로직 넣기
+    $error = null;
+    $source = array();
+    if ($is_debug || G5_COLLECT_QUERY) {
+        if(function_exists('mysqli_error') && G5_MYSQLI_USE) {
+            $error = array(
+                'error_code' => mysqli_errno($link),
+                'error_message' => mysqli_error($link),
+            );
+        } else {
+            $error = array(
+                'error_code' => mysql_errno($link),
+                'error_message' => mysql_error($link),
+            );
+        }
+
+        $stack = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
+        $found = false;
+
+        foreach ($stack as $index => $trace) {
+            if ($trace['function'] === 'sql_query') {
+                $found = true;
+            }
+            if (isset($stack[$index + 1]) && $stack[$index + 1]['function'] === 'sql_fetch') {
+                continue;
+            }
+
+            if ($found) {
+                $trace['file'] = str_replace($_SERVER['DOCUMENT_ROOT'], '', $trace['file']);
+                $source['file'] = $trace['file'];
+                $source['line'] = $trace['line'];
+
+                $parent = (isset($stack[$index + 1])) ? $stack[$index + 1] : array();
+                if (isset($parent['function'])) {
+                    if (in_array($trace['function'], array('sql_query', 'sql_fetch')) && (isset($parent['function']) && !in_array($parent['function'], array('sql_fetch', 'include', 'include_once', 'require', 'require_once')))) {
+                        if (isset($parent['class']) && $parent['class']) {
+                            $source['class'] = $parent['class'];
+                            $source['function'] = $parent['function'];
+                            $source['type'] = $parent['type'];
+                        } else {
+                            $source['function'] = $parent['function'];
+                        }
+                    }
+                }
+                break;
+            }
+        }
+
         $g5_debug['sql'][] = array(
             'sql' => $sql,
+            'result' => $result,
+            'success' => !!$result,
+            'source' => $source,
+            'error_code' => $error['error_code'],
+            'error_message' => $error['error_message'],
             'start_time' => $start_time,
             'end_time' => $end_time,
-            );
+        );
     }
 
-    run_event('sql_query_after', $result, $sql, $start_time, $end_time);
+    run_event('sql_query_after', $result, $sql, $start_time, $end_time, $error, $source);
 
     return $result;
 }
@@ -1647,7 +1868,11 @@ function sql_fetch_array($result)
     if( ! $result) return array();
 
     if(function_exists('mysqli_fetch_assoc') && G5_MYSQLI_USE)
-        $row = @mysqli_fetch_assoc($result);
+        try {
+            $row = @mysqli_fetch_assoc($result);
+        } catch (Exception $e) {
+            $row = null;
+        }
     else
         $row = @mysql_fetch_assoc($result);
 
@@ -1669,11 +1894,22 @@ function sql_free_result($result)
 }
 
 
+/**
+ * MySQL PASSWORD() 함수로 생성된 비밀번호의 hash 값을 반환
+ * 
+ * MySQL 버전에 따라 결과가 다르게 나올 수 있음.
+ * MySQL 8.0.11 버전 이상에서는 오류 발생(PASSWORD 함수가 제거됨)으로 사용할 수 없음.
+ * 
+ * @deprecated 이 함수는 안전하지 않으므로 사용하지 않는 것을 권장 함
+ * @see get_encrypt_string() and check_password()
+ * @param string $value
+ * @return string
+ */
 function sql_password($value)
 {
     // mysql 4.0x 이하 버전에서는 password() 함수의 결과가 16bytes
     // mysql 4.1x 이상 버전에서는 password() 함수의 결과가 41bytes
-    $row = sql_fetch(" select password('$value') as pass ");
+    $row = sql_fetch(" SELECT password('{$value}') as pass ");
 
     return $row['pass'];
 }
@@ -1909,7 +2145,7 @@ function time_select($time, $name="")
     preg_match("/([0-9]{2}):([0-9]{2}):([0-9]{2})/", $time, $m);
 
     // 시
-    $s .= "<select name='{$name}_h'>";
+    $s = "<select name='{$name}_h'>";
     for ($i=0; $i<=23; $i++) {
         $s .= "<option value='$i'";
         if ($i == $m['0']) {
@@ -2044,17 +2280,36 @@ function bad_tag_convert($code)
     global $view;
     global $member, $is_admin;
 
-    if ($is_admin && $member['mb_id'] != $view['mb_id']) {
+    if ($is_admin && $member['mb_id'] !== $view['mb_id']) {
         //$code = preg_replace_callback("#(\<(embed|object)[^\>]*)\>(\<\/(embed|object)\>)?#i",
         // embed 또는 object 태그를 막지 않는 경우 필터링이 되도록 수정
-        $code = preg_replace_callback("#(\<(embed|object)[^\>]*)\>?(\<\/(embed|object)\>)?#i",
-                    create_function('$matches', 'return "<div class=\"embedx\">보안문제로 인하여 관리자 아이디로는 embed 또는 object 태그를 볼 수 없습니다. 확인하시려면 관리권한이 없는 다른 아이디로 접속하세요.</div>";'),
-                    $code);
+        $code = preg_replace_callback("#(\<(embed|object)[^\>]*)\>?(\<\/(embed|object)\>)?#i", '_callback_bad_tag_convert', $code);
     }
 
     return preg_replace("/\<([\/]?)(script|iframe|form)([^\>]*)\>?/i", "&lt;$1$2$3&gt;", $code);
 }
 
+function _callback_bad_tag_convert($matches){
+    return "<div class=\"embedx\">보안문제로 인하여 관리자 아이디로는 embed 또는 object 태그를 볼 수 없습니다. 확인하시려면 관리권한이 없는 다른 아이디로 접속하세요.</div>";
+}
+
+function normalize_utf8_string($string) {
+    // utf8mb4 환경과 mb_ord 함수가 지원되지 않는 환경에서는 제외한다.
+    if (G5_DB_CHARSET === 'utf8mb4' || !function_exists('mb_ord')) {
+        return $string;
+    }
+    
+    // Unicode 특수 문자를 일반 문자로 변환
+    $normalized = preg_replace_callback('/[\x{1D400}-\x{1D7FF}]/u', '_callback_normalizeString', $string);
+
+    return $normalized;
+}
+
+function _callback_normalizeString($matches){
+    $charCode = mb_ord($matches[0], 'UTF-8');
+    // 변환 테이블에서 일반 문자로 매핑
+    return chr(($charCode - 0x1D400) % 26 + ord('A'));
+}
 
 // 토큰 생성
 function _token()
@@ -2080,6 +2335,53 @@ function check_token()
     return true;
 }
 
+/**
+ * 브라우저 검증을 위한 세션 반환 및 재생성
+ * @param array $member 로그인 된 회원의 정보. 가입일시(mb_datetime)를 반드시 포함해야 한다.
+ * @param bool $regenerate true 이면 재생성
+ * @return string
+ */
+function ss_mb_key($member, $regenerate = false)
+{
+    $client_key = ($regenerate) ? null : get_cookie('mb_client_key');
+
+    if (!$client_key) {
+        $client_key = get_random_token_string(16);
+        set_cookie('mb_client_key', $client_key, G5_SERVER_TIME * -1);
+    }
+
+    $mb_key = md5($member['mb_datetime'] . $client_key) . run_replace('ss_mb_key_user_agent', md5($_SERVER['HTTP_USER_AGENT']));
+
+    return $mb_key;
+}
+
+/**
+ * 회원의 클라이언트 검증
+ * @param array $member 로그인 된 회원의 정보. 가입일시(mb_datetime)를 반드시 포함해야 한다.
+ * @return bool
+ */
+function verify_mb_key($member)
+{
+    $mb_key = ss_mb_key($member);
+    $verified = get_session('ss_mb_key') === $mb_key;
+
+    if (!$verified) {
+        ss_mb_key($member, true);
+    }
+
+    return $verified;
+}
+
+/**
+ * 회원의 클라이언트 검증 키 생성
+ * 클라이언트 키를 다시 생성하여 생성된 키는 `ss_mb_key` 세션에 저장됨
+ * @param array $member 로그인 된 회원의 정보. 가입일시(mb_datetime)를 반드시 포함해야 한다.
+ */
+function generate_mb_key($member)
+{
+    $mb_key = ss_mb_key($member, true);
+    set_session('ss_mb_key', $mb_key);
+}
 
 // 문자열에 utf8 문자가 들어 있는지 검사하는 함수
 // 코드 : http://in2.php.net/manual/en/function.mb-check-encoding.php#95289
@@ -2216,7 +2518,10 @@ function get_checked($field, $value)
 
 function is_mobile()
 {
-    return preg_match('/'.G5_MOBILE_AGENT.'/i', $_SERVER['HTTP_USER_AGENT']);
+    if (isset($_SERVER['HTTP_USER_AGENT']))
+        return  preg_match('/'.G5_MOBILE_AGENT.'/i', $_SERVER['HTTP_USER_AGENT']);
+    else
+        return '';
 }
 
 
@@ -2240,6 +2545,10 @@ function get_uniqid()
 {
     global $g5;
 
+    if ($get_uniqid_key = run_replace('get_uniqid_key', '')) {
+        return $get_uniqid_key;
+    }
+    
     sql_query(" LOCK TABLE {$g5['uniqid_table']} WRITE ");
     while (1) {
         // 년월일시분초에 100분의 1초 두자리를 추가함 (1/100 초 앞에 자리가 모자르면 0으로 채움)
@@ -2286,14 +2595,19 @@ function check_device($device)
 }
 
 
-// 게시판 최신글 캐시 파일 삭제
+/**
+ * 게시판 최신글 캐시 파일 삭제
+ * @param string $bo_table 게시판 ID
+ */
 function delete_cache_latest($bo_table)
 {
     if (!preg_match("/^([A-Za-z0-9_]{1,20})$/", $bo_table)) {
         return;
     }
 
-    g5_delete_cache_by_prefix('latest-'.$bo_table.'-');
+    run_event('delete_cache_latest', $bo_table);
+
+    g5_delete_cache_by_prefix('latest-' . $bo_table . '-');
 }
 
 // 게시판 첨부파일 썸네일 삭제
@@ -2343,8 +2657,9 @@ function delete_editor_thumbnail($contents)
     for($i=0; $i<count($matchs[1]); $i++) {
         // 이미지 path 구함
         $imgurl = @parse_url($matchs[1][$i]);
-        $srcfile = dirname(G5_PATH).$imgurl['path'];
-        if(! preg_match('/(\.jpe?g|\.gif|\.png)$/i', $srcfile)) continue;
+        // $srcfile = dirname(G5_PATH).$imgurl['path'];
+        $srcfile = (G5_PATH).$imgurl['path'];
+        if(!preg_match('/(\.jpe?g|\.gif|\.png|\.webp)$/i', $srcfile)) continue;
         $filename = preg_replace("/\.[^\.]+$/i", "", basename($srcfile));
         $filepath = dirname($srcfile);
         $files = glob($filepath.'/thumb-'.$filename.'*');
@@ -2468,53 +2783,61 @@ function get_skin_javascript($skin_path, $dir='')
     return $str;
 }
 
-// file_put_contents 는 PHP5 전용 함수이므로 PHP4 하위버전에서 사용하기 위함
-// http://www.phpied.com/file_get_contents-for-php4/
-if (!function_exists('file_put_contents')) {
-    function file_put_contents($filename, $data) {
-        $f = @fopen($filename, 'w');
-        if (!$f) {
-            return false;
-        } else {
-            $bytes = fwrite($f, $data);
-            fclose($f);
-            return $bytes;
-        }
+if (!function_exists('get_called_class')) {
+    function get_called_class() {
+        $bt = debug_backtrace();
+        $lines = file($bt[1]['file']);
+        preg_match(
+            '/([a-zA-Z0-9\_]+)::'.$bt[1]['function'].'/',
+            $lines[$bt[1]['line']-1],
+            $matches
+        );
+        return $matches[1];
     }
 }
 
+function get_html_process_cls() {
+    return html_process::getInstance();
+}
 
 // HTML 마지막 처리
 function html_end()
 {
-    global $html_process;
-
-    return $html_process->run();
+    return get_html_process_cls()->run();
 }
 
 function add_stylesheet($stylesheet, $order=0)
 {
-    global $html_process;
-
-    if(trim($stylesheet) && method_exists($html_process, 'merge_stylesheet') )
-        $html_process->merge_stylesheet($stylesheet, $order);
+    if(trim($stylesheet))
+        get_html_process_cls()->merge_stylesheet($stylesheet, $order);
 }
 
 function add_javascript($javascript, $order=0)
 {
-    global $html_process;
-
-    if(trim($javascript) && method_exists($html_process, 'merge_javascript') )
-        $html_process->merge_javascript($javascript, $order);
+    if(trim($javascript))
+        get_html_process_cls()->merge_javascript($javascript, $order);
 }
 
 class html_process {
-    protected $css = array();
-    protected $js  = array();
+    protected static $id = '0';
+    private static $instances = array();
+    protected static $is_end = '0';
+    protected static $css = array();
+    protected static $js  = array();
 
-    function merge_stylesheet($stylesheet, $order)
+    public static function getInstance($id = '0')
     {
-        $links = $this->css;
+        self::$id = $id;
+        if (isset(self::$instances[self::$id])) {
+            return self::$instances[self::$id];
+        }
+        $calledClass = get_called_class();
+        return self::$instances[self::$id] = new $calledClass;
+    }
+
+    public static function merge_stylesheet($stylesheet, $order)
+    {
+        $links = self::$css;
         $is_merge = true;
 
         foreach($links as $link) {
@@ -2525,12 +2848,12 @@ class html_process {
         }
 
         if($is_merge)
-            $this->css[] = array($order, $stylesheet);
+            self::$css[] = array($order, $stylesheet);
     }
 
-    function merge_javascript($javascript, $order)
+    public static function merge_javascript($javascript, $order)
     {
-        $scripts = $this->js;
+        $scripts = self::$js;
         $is_merge = true;
 
         foreach($scripts as $script) {
@@ -2541,12 +2864,16 @@ class html_process {
         }
 
         if($is_merge)
-            $this->js[] = array($order, $javascript);
+            self::$js[] = array($order, $javascript);
     }
 
-    function run()
+    public static function run()
     {
         global $config, $g5, $member;
+
+        if (self::$is_end) return;  // 여러번 호출해도 한번만 실행되게 합니다.
+
+        self::$is_end = 1;
 
         // 현재접속자 처리
         $tmp_sql = " select count(*) as cnt from {$g5['login_table']} where lo_ip = '{$_SERVER['REMOTE_ADDR']}' ";
@@ -2572,7 +2899,7 @@ class html_process {
         ob_end_clean();
 
         $stylesheet = '';
-        $links = $this->css;
+        $links = self::$css;
 
         if(!empty($links)) {
             foreach ($links as $key => $row) {
@@ -2596,7 +2923,7 @@ class html_process {
         }
 
         $javascript = '';
-        $scripts = $this->js;
+        $scripts = self::$js;
         $php_eol = '';
 
         unset($order);
@@ -2630,7 +2957,12 @@ class html_process {
         <link rel="stylesheet" href="default.css">
         밑으로 스킨의 스타일시트가 위치하도록 하게 한다.
         */
-        $buffer = preg_replace('#(</title>[^<]*<link[^>]+>)#', "$1$stylesheet", $buffer);
+        $title_find_pattern = '#(</title>[^<]*<link[^>]+>)#';
+        if (preg_match($title_find_pattern, $buffer)) {
+            $buffer = preg_replace($title_find_pattern, "$1$stylesheet", $buffer);
+        } else {    // 패턴이 없다면 자바스크립트 코드 위에 위치하게 합니다.
+            $javascript = $stylesheet. PHP_EOL. $javascript;
+        }
 
         /*
         </head>
@@ -2652,6 +2984,8 @@ class html_process {
             $nl = "\n";
             $buffer = preg_replace('#(<title[^>]*>.*?</title>)#', "$meta_tag{$nl}$1", $buffer);
         }
+
+        $buffer = run_replace('html_process_buffer', $buffer);
 
         return $buffer;
     }
@@ -2757,6 +3091,41 @@ function insert_cert_history($mb_id, $company, $method)
     sql_query($sql);
 }
 
+// 본인확인 변경내역 기록
+function insert_member_cert_history($mb_id, $name, $hp, $birth, $type)
+{
+    global $g5;
+
+    // 본인인증 내역 테이블 정보가 dbconfig에 없으면 소셜 테이블 정의
+    if( !isset($g5['member_cert_history']) ){
+        $g5['member_cert_history_table'] = G5_TABLE_PREFIX.'member_cert_history';
+    }
+    
+    // 멤버 본인인증 정보 변경 내역 테이블 없을 경우 생성
+    if(isset($g5['member_cert_history_table']) && !sql_query(" DESC {$g5['member_cert_history_table']} ", false)) {
+        sql_query(" CREATE TABLE IF NOT EXISTS `{$g5['member_cert_history_table']}` (
+                        `ch_id` int(11) NOT NULL auto_increment,
+                        `mb_id` varchar(20) NOT NULL DEFAULT '',
+                        `ch_name` varchar(255) NOT NULL DEFAULT '',
+                        `ch_hp` varchar(255) NOT NULL DEFAULT '',
+                        `ch_birth` varchar(255) NOT NULL DEFAULT '',
+                        `ch_type` varchar(20) NOT NULL DEFAULT '',
+                        `ch_datetime` datetime NOT NULL default '0000-00-00 00:00:00',
+                        PRIMARY KEY (`ch_id`),
+                        KEY `mb_id` (`mb_id`)
+                    ) ", true);
+    }
+
+    $sql = " insert into {$g5['member_cert_history_table']}
+                set mb_id = '{$mb_id}',
+                    ch_name = '{$name}',
+                    ch_hp = '{$hp}',
+                    ch_birth = '{$birth}',
+                    ch_type = '{$type}',
+                    ch_datetime = '".G5_TIME_YMD." ".G5_TIME_HIS."'";
+    sql_query($sql);
+}
+
 // 인증시도회수 체크
 function certify_count_check($mb_id, $type)
 {
@@ -2781,6 +3150,9 @@ function certify_count_check($mb_id, $type)
     $row = sql_fetch($sql);
 
     switch($type) {
+        case 'simple' :
+            $cert = '간편인증';
+            break;
         case 'hp':
             $cert = '휴대폰';
             break;
@@ -2904,6 +3276,21 @@ function module_exec_check($exe, $type)
                             }
                         }
                         break;
+                    case 'pp_cli':
+                        exec($exe.' -h 2>&1', $out, $return_var);
+
+                        if($return_var == 139) {
+                            $isbinary = false;
+                            break;
+                        }
+
+                        for($i=0; $i<count($out); $i++) {
+                            if(strpos($out[$i], 'CLIENT') !== false) {
+                                $search = true;
+                                break;
+                            }
+                        }
+                        break;
                     case 'okname':
                         exec($exe.' D 2>&1', $out, $return_var);
 
@@ -3014,8 +3401,13 @@ function get_search_string($stx)
 }
 
 // XSS 관련 태그 제거
-function clean_xss_tags($str, $check_entities=0, $is_remove_tags=0, $cur_str_len=0)
+function clean_xss_tags($str, $check_entities=0, $is_remove_tags=0, $cur_str_len=0, $is_trim_both=1)
 {
+    if( $is_trim_both ) {
+        // tab('\t'), formfeed('\f'), vertical tab('\v'), newline('\n'), carriage return('\r') 를 제거한다.
+        $str = preg_replace("#[\t\f\v\n\r]#", '', $str);
+    }
+
     if( $is_remove_tags ){
         $str = strip_tags($str);
     }
@@ -3122,7 +3514,7 @@ function member_delete($mb_id)
     }
 
     // 회원자료는 정보만 없앤 후 아이디는 보관하여 다른 사람이 사용하지 못하도록 함 : 061025
-    $sql = " update {$g5['member_table']} set mb_password = '', mb_level = 1, mb_email = '', mb_homepage = '', mb_tel = '', mb_hp = '', mb_zip1 = '', mb_zip2 = '', mb_addr1 = '', mb_addr2 = '', mb_birth = '', mb_sex = '', mb_signature = '', mb_memo = '".date('Ymd', G5_SERVER_TIME)." 삭제함\n".sql_real_escape_string($mb['mb_memo'])."' where mb_id = '{$mb_id}' ";
+    $sql = " update {$g5['member_table']} set mb_password = '', mb_level = 1, mb_email = '', mb_homepage = '', mb_tel = '', mb_hp = '', mb_zip1 = '', mb_zip2 = '', mb_addr1 = '', mb_addr2 = '', mb_addr3 = '', mb_point = 0, mb_profile = '', mb_birth = '', mb_sex = '', mb_signature = '', mb_memo = '".date('Ymd', G5_SERVER_TIME)." 삭제함\n".sql_real_escape_string($mb['mb_memo'])."', mb_certify = '', mb_adult = 0, mb_dupinfo = '' where mb_id = '{$mb_id}' ";
 
     sql_query($sql);
 
@@ -3271,13 +3663,37 @@ function login_password_check($mb, $pass, $hash)
     return check_password($pass, $hash);
 }
 
+function safe_filter_url_host($url) {
+
+    $regex = run_replace('safe_filter_url_regex', '\\', $url);
+
+    return $regex ? preg_replace('#'. preg_quote($regex, '#') .'#iu', '', $url) : '';
+}
+
 // 동일한 host url 인지
 function check_url_host($url, $msg='', $return_url=G5_URL, $is_redirect=false)
 {
     if(!$msg)
         $msg = 'url에 타 도메인을 지정할 수 없습니다.';
 
-    $p = @parse_url($url);
+    if(run_replace('check_url_host_before', '', $url, $msg, $return_url, $is_redirect) === 'is_checked'){
+        return;
+    }
+
+    // KVE-2021-1277 Open Redirect 취약점 해결
+    if (preg_match('#\\\0#', $url) || preg_match('/^\/{1,}\\\/', $url)) {
+        alert('url 에 올바르지 않은 값이 포함되어 있습니다.');
+    }
+
+    if (preg_match('#//[^/@]+@#', $url)) {
+        alert('url에 사용자 정보가 포함되어 있어 접근할 수 없습니다.');
+    }
+
+    while ( ( $replace_url = preg_replace(array('/\/{2,}/', '/\\@/'), array('//', ''), urldecode($url)) ) != $url ) {
+        $url = $replace_url;
+    }
+
+    $p = @parse_url(trim(str_replace('\\', '', $url)));
     $host = preg_replace('/:[0-9]+$/', '', $_SERVER['HTTP_HOST']);
     $is_host_check = false;
     
@@ -3297,10 +3713,10 @@ function check_url_host($url, $msg='', $return_url=G5_URL, $is_redirect=false)
         }
     }
 
-    if(stripos($url, 'http:') !== false) {
-        if(!isset($p['scheme']) || !$p['scheme'] || !isset($p['host']) || !$p['host'])
-            alert('url 정보가 올바르지 않습니다.', $return_url);
-    }
+    // if(stripos($url, 'http:') !== false) {
+    //     if(!isset($p['scheme']) || !$p['scheme'] || !isset($p['host']) || !$p['host'])
+    //         alert('url 정보가 올바르지 않습니다.', $return_url);
+    // }
 
     //php 5.6.29 이하 버전에서는 parse_url 버그가 존재함
     //php 7.0.1 ~ 7.0.5 버전에서는 parse_url 버그가 존재함
@@ -3321,7 +3737,7 @@ function check_url_host($url, $msg='', $return_url=G5_URL, $is_redirect=false)
 
     if ((isset($p['scheme']) && $p['scheme']) || (isset($p['host']) && $p['host']) || $is_host_check) {
         //if ($p['host'].(isset($p['port']) ? ':'.$p['port'] : '') != $_SERVER['HTTP_HOST']) {
-        if ( ($p['host'] != $host) || $is_host_check ) {
+        if (run_replace('check_same_url_host', (($p['host'] != $host) || $is_host_check), $p, $host, $is_host_check, $return_url, $is_redirect)) {
             echo '<script>'.PHP_EOL;
             echo 'alert("url에 타 도메인을 지정할 수 없습니다.");'.PHP_EOL;
             echo 'document.location.href = "'.$return_url.'";'.PHP_EOL;
@@ -3536,7 +3952,7 @@ function check_vaild_callback($callback){
 class str_encrypt
 {
     var $salt;
-    var $lenght;
+    var $length;
 
     function __construct($salt='')
     {
@@ -3717,15 +4133,9 @@ function safe_replace_regex($str, $str_case=''){
     return preg_replace('/[^0-9a-z_\-]/i', '', $str);
 }
 
-function get_real_client_ip(){
-
-    $real_ip = $_SERVER['REMOTE_ADDR'];
-
-    if(isset($_SERVER['HTTP_X_FORWARDED_FOR']) && preg_match('/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\z/', $_SERVER['HTTP_X_FORWARDED_FOR']) ){
-        $real_ip = $_SERVER['HTTP_X_FORWARDED_FOR'];
-    }
-
-    return preg_replace('/[^0-9.]/', '', $real_ip);
+function get_real_client_ip() {
+    
+    return run_replace('get_real_client_ip', $_SERVER['REMOTE_ADDR']);
 }
 
 function check_mail_bot($ip=''){
@@ -3794,7 +4204,14 @@ function is_include_path_check($path='', $is_input='')
             if ( $peer_count && $peer_count > $slash_count ){
                 return false;
             }
-
+            
+            $dirname_doc_root = !empty($_SERVER['DOCUMENT_ROOT']) ? dirname($_SERVER['DOCUMENT_ROOT']) : dirname(dirname(dirname(__DIR__)));
+            
+            // 웹서버 폴더만 허용
+            if ($dirname_doc_root && file_exists($path) && strpos(realpath($path), realpath($dirname_doc_root)) !== 0) {
+                return false;
+            }
+            
             try {
                 // whether $path is unix or not
                 $unipath = strlen($path)==0 || substr($path, 0, 1) != '/';
@@ -3830,8 +4247,8 @@ function is_include_path_check($path='', $is_input='')
                 //echo 'Caught exception: ',  $e->getMessage(), "\n";
                 return false;
             }
-
-            if( preg_match('/\/data\/(file|editor|qa|cache|member|member_image|session|tmp)\/[A-Za-z0-9_]{1,20}\//i', $replace_path) ){
+            
+            if (preg_match('/\/data\/(file|editor|qa|cache|member|member_image|session|tmp)\/[A-Za-z0-9_]{1,20}\//i', $replace_path) || preg_match('/pear(cmd)?\.php/i', $replace_path)){
                 return false;
             }
             if( preg_match('/'.G5_PLUGIN_DIR.'\//i', $replace_path) && (preg_match('/'.G5_OKNAME_DIR.'\//i', $replace_path) || preg_match('/'.G5_KCPCERT_DIR.'\//i', $replace_path) || preg_match('/'.G5_LGXPAY_DIR.'\//i', $replace_path)) || (preg_match('/search\.skin\.php/i', $replace_path) ) ){
@@ -3855,8 +4272,47 @@ function is_include_path_check($path='', $is_input='')
     return true;
 }
 
+function is_inicis_url_return($url){
+    $url_data = parse_url($url);
+
+    // KG 이니시스 url이 맞는지 체크하여 맞으면 url을 리턴하고 틀리면 '' 빈값을 리턴합니다.
+    if (isset($url_data['host']) && preg_match('#\.inicis\.com$#i', $url_data['host'])) {
+        return $url;
+    }
+    return '';
+}
+
+function check_auth_session_token($str=''){
+    if (get_session('ss_mb_token_key') === get_token_encryption_key($str)) {
+        return true;
+    }
+    return false;
+}
+
+function update_auth_session_token($str=''){
+    set_session('ss_mb_token_key', get_token_encryption_key($str));
+}
+
+function get_token_encryption_key($str=''){
+    $token = G5_TABLE_PREFIX.(defined('G5_SHOP_TABLE_PREFIX') ? G5_SHOP_TABLE_PREFIX : '').(defined('G5_TOKEN_ENCRYPTION_KEY') ? G5_TOKEN_ENCRYPTION_KEY : '').$str;
+
+    return md5($token);
+}
+
+function get_random_token_string($length=6)
+{
+    if(function_exists('random_bytes')){
+        return bin2hex(random_bytes($length));
+    }
+
+    $characters = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+    $output = substr(str_shuffle($characters), 0, $length);
+
+    return bin2hex($output);
+}
+
 function filter_input_include_path($path){
-    return str_replace('//', '/', $path);
+    return str_replace('//', '/', strip_tags($path));
 }
 
 function option_array_checked($option, $arr=array()){

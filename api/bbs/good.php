@@ -1,6 +1,8 @@
 <?php
 include_once('./_common.php');
 
+$good = isset($_REQUEST['good']) ? preg_replace('/[^a-z0-9]/i', '', $_REQUEST['good']) : '';
+
 run_event('bbs_good_before', $bo_table, $wr_id, $good);
 
 @include_once($board_skin_path.'/good.head.skin.php');
@@ -62,7 +64,7 @@ if(isset($_POST['js']) && $_POST['js'] === "on") {
                     and mb_id = '{$member['mb_id']}'
                     and bg_flag in ('good', 'nogood') ";
         $row = sql_fetch($sql);
-        if ($row['bg_flag'])
+        if (isset($row['bg_flag']) && $row['bg_flag'])
         {
             if ($row['bg_flag'] == 'good')
                 $status = '추천';
@@ -127,7 +129,7 @@ if(isset($_POST['js']) && $_POST['js'] === "on") {
                     and mb_id = '{$member['mb_id']}'
                     and bg_flag in ('good', 'nogood') ";
         $row = sql_fetch($sql);
-        if ($row['bg_flag'])
+        if (isset($row['bg_flag']) && $row['bg_flag'])
         {
             if ($row['bg_flag'] == 'good')
                 $status = '추천';

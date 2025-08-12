@@ -22,7 +22,16 @@ $file = sql_fetch($sql);
 if (!$file['bf_file'])
     alert_close('파일 정보가 존재하지 않습니다.');
 
+$nonce = isset($_REQUEST['nonce']) ? preg_replace('/[^0-9a-z\|]/i', '', $_REQUEST['nonce']) : '';
+
+if (function_exists('download_file_nonce_is_valid') && !defined('G5_DOWNLOAD_NONCE_CHECK')){
+    if(! download_file_nonce_is_valid($nonce, $bo_table, $wr_id)){
+        alert('토큰 유효시간이 지났거나 토큰이 유효하지 않습니다.\\n브라우저를 새로고침 후 다시 시도해 주세요.', G5_URL);
+    }
+}
+
 // JavaScript 불가일 때
+$js = (isset($_GET['js'])) ? $_GET['js'] : '';
 if($js != 'on' && $board['bo_download_point'] < 0) {
     $msg = $file['bf_source'].' 파일을 다운로드 하시면 포인트가 차감('.number_format($board['bo_download_point']).'점)됩니다.\\n포인트는 게시물당 한번만 차감되며 다음에 다시 다운로드 하셔도 중복하여 차감하지 않습니다.\\n그래도 다운로드 하시겠습니까?';
     $url1 = G5_BBS_URL.'/download.php?'.clean_query_string($_SERVER['QUERY_STRING'], false).'&js=on';

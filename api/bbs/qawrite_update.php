@@ -86,6 +86,8 @@ $qa_related = 0;
 $qa_email_recv = (isset($_POST['qa_email_recv']) && $_POST['qa_email_recv']) ? 1 : 0;
 $qa_sms_recv = (isset($_POST['qa_sms_recv']) && $_POST['qa_sms_recv']) ? 1 : 0;
 $qa_status = 0;
+$qa_html = (isset($_POST['qa_html']) && $_POST['qa_html']) ? (int) $_POST['qa_html'] : 0;
+$answer_id = null;
 
 for ($i=1; $i<=5; $i++) {
     $var = "qa_$i";
@@ -157,7 +159,7 @@ for ($i=1; $i<=$upload_count; $i++) {
     // 삭제에 체크가 되어있다면 파일을 삭제합니다.
     if (isset($_POST['bf_file_del'][$i]) && $_POST['bf_file_del'][$i]) {
         $upload[$i]['del_check'] = true;
-        @unlink(G5_DATA_PATH.'/qa/'.$write['qa_file'.$i]);
+        @unlink(G5_DATA_PATH.'/qa/'.clean_relative_paths($write['qa_file'.$i]));
         // 썸네일삭제
         if(preg_match("/\.({$config['cf_image_extension']})$/i", $write['qa_file'.$i])) {
             delete_qa_thumbnail($write['qa_file'.$i]);
@@ -197,14 +199,15 @@ for ($i=1; $i<=$upload_count; $i++) {
         // image type
         if ( preg_match("/\.({$config['cf_image_extension']})$/i", $filename) ||
              preg_match("/\.({$config['cf_flash_extension']})$/i", $filename) ) {
-            if ($timg['2'] < 1 || $timg['2'] > 16)
+            // webp 파일의 type 이 18 이므로 업로드가 가능하도록 수정
+            if ($timg['2'] < 1 || $timg['2'] > 18)
                 continue;
         }
         //=================================================================
 
         if ($w == 'u') {
             // 존재하는 파일이 있다면 삭제합니다.
-            @unlink(G5_DATA_PATH.'/qa/'.$write['qa_file'.$i]);
+            @unlink(G5_DATA_PATH.'/qa/'.clean_relative_paths($write['qa_file'.$i]));
             // 이미지파일이면 썸네일삭제
             if(preg_match("/\.({$config['cf_image_extension']})$/i", $write['qa_file'.$i])) {
                 delete_qa_thumbnail($row['qa_file'.$i]);
@@ -216,13 +219,13 @@ for ($i=1; $i<=$upload_count; $i++) {
         $upload[$i]['filesize'] = $filesize;
 
         // 아래의 문자열이 들어간 파일은 -x 를 붙여서 웹경로를 알더라도 실행을 하지 못하도록 함
-        $filename = preg_replace("/\.(php|pht|phtm|htm|cgi|pl|exe|jsp|asp|inc)/i", "$0-x", $filename);
+        $filename = preg_replace("/\.(php|pht|phtm|htm|cgi|pl|exe|jsp|asp|inc|phar)/i", "$0-x", $filename);
 
         shuffle($chars_array);
         $shuffle = implode('', $chars_array);
 
         // 첨부파일 첨부시 첨부파일명에 공백이 포함되어 있으면 일부 PC에서 보이지 않거나 다운로드 되지 않는 현상이 있습니다. (길상여의 님 090925)
-        $upload[$i]['file'] = abs(ip2long($_SERVER['REMOTE_ADDR'])).'_'.substr($shuffle,0,8).'_'.replace_filename($filename);
+        $upload[$i]['file'] = md5(sha1($_SERVER['REMOTE_ADDR'])).'_'.substr($shuffle,0,8).'_'.replace_filename($filename);
 
         $dest_file = G5_DATA_PATH.'/qa/'.$upload[$i]['file'];
 
@@ -244,7 +247,7 @@ if($w == '' || $w == 'a' || $w == 'r') {
         $qa_num = $write['qa_num'];
         $qa_parent = $write['qa_id'];
         $qa_related = $write['qa_related'];
-        $qa_category = $write['qa_category'];
+        $qa_category = addslashes($write['qa_category']);
         $qa_type = 1;
         $qa_status = 1;
     }
@@ -300,6 +303,7 @@ if($w == '' || $w == 'a' || $w == 'r') {
     }
 
     if($w == 'a') {
+        $answer_id = (int) sql_insert_id();
         $sql = " update {$g5['qa_content_table']}
                     set qa_status = '1'
                     where qa_id = '{$write['qa_parent']}' ";
@@ -338,7 +342,15 @@ if($w == '' || $w == 'a' || $w == 'r') {
     sql_query($sql);
 }
 
-run_event('qawrite_update', $qa_id, $write, $w, $qaconfig);
+/**
+ * 1:1 문의/답변의 변경 시 Event Hook
+ * @var int $qa_id 삽입/수정 또는 답글/추가질문 대상 글의 ID
+ * @var array $write 삽입/수정 또는 답글/추가질문 대상 글의 데이터
+ * @var string $w 동작 모드 ('': 질문글 작성, 'a': 답변글 작성, 'u': 질문/답변 수정, 'r': 추가(관련) 질문)
+ * @var array $qaconfig 1:1 문의 설정
+ * @var ?int $answer_id 답변글 작성($w = 'a') 시 답변글의 ID
+*/
+run_event('qawrite_update', $qa_id, $write, $w, $qaconfig, ($w === 'a') ? $answer_id : null);
 
 // SMS 알림
 if($config['cf_sms_use'] == 'icode' && $qaconfig['qa_use_sms']) {

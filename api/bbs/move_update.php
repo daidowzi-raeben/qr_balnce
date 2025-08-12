@@ -49,7 +49,9 @@ while ($row = sql_fetch_array($result))
         $count_write = 0;
         $count_comment = 0;
 
-        $next_wr_num = get_next_num($move_write_table);
+        // get_next_num 함수는 mysql 지연시 중복이 될수 있는 문제로 더 이상 사용하지 않습니다.
+        // $next_wr_num = get_next_num($move_write_table);
+        $next_wr_num = 0;
 
         $sql2 = " select * from $write_table where wr_num = '$wr_num' order by wr_parent, wr_is_comment, wr_comment desc, wr_id ";
         $result2 = sql_query($sql2);
@@ -78,7 +80,7 @@ while ($row = sql_fetch_array($result))
             }
 
             $sql = " insert into $move_write_table
-                        set wr_num = '$next_wr_num',
+                        set wr_num = " . ($next_wr_num ? "'$next_wr_num'" : "(SELECT IFNULL(MIN(wr_num) - 1, -1) FROM $move_write_table as sq) ") . ",
                              wr_reply = '{$row2['wr_reply']}',
                              wr_is_comment = '{$row2['wr_is_comment']}',
                              wr_comment = '{$row2['wr_comment']}',
@@ -116,6 +118,11 @@ while ($row = sql_fetch_array($result))
             sql_query($sql);
 
             $insert_id = sql_insert_id();
+            
+            if ($next_wr_num === 0) {
+                $tmp = sql_fetch("select wr_num from $move_write_table where wr_id = '$insert_id'");
+                $next_wr_num = $tmp['wr_num'];
+            }
 
             // 코멘트가 아니라면
             if (!$row2['wr_is_comment'])
@@ -126,11 +133,26 @@ while ($row = sql_fetch_array($result))
                 $result3 = sql_query($sql3);
                 for ($k=0; $row3 = sql_fetch_array($result3); $k++)
                 {
+                    $copy_file_name = '';
+                    
                     if ($row3['bf_file'])
                     {
                         // 원본파일을 복사하고 퍼미션을 변경
                         // 제이프로님 코드제안 적용
-                        $copy_file_name = ($bo_table !== $move_bo_table) ? $row3['bf_file'] : $row2['wr_id'].'_copy_'.$insert_id.'_'.$row3['bf_file'];
+
+                        $copy_file_name = $row3['bf_file'];
+
+                        if($bo_table === $move_bo_table){
+                            if(preg_match('/_copy(\d+)?_(\d+)_/', $copy_file_name, $match)){
+
+                                $number = isset($match[1]) ? (int) $match[1] : 0;
+                                $replace_str = '_copy'.($number + 1).'_'.$insert_id.'_';
+                                $copy_file_name = preg_replace('/_copy(\d+)?_(\d+)_/', $replace_str, $copy_file_name);
+                            } else {
+                                $copy_file_name = $row2['wr_id'].'_copy_'.$insert_id.'_'.$row3['bf_file'];
+                            }
+                        }
+
                         $is_exist_file = is_file($src_dir.'/'.$row3['bf_file']) && file_exists($src_dir.'/'.$row3['bf_file']);
                         if( $is_exist_file ){
                             @copy($src_dir.'/'.$row3['bf_file'], $dst_dir.'/'.$copy_file_name);
@@ -193,12 +215,12 @@ while ($row = sql_fetch_array($result))
                 $save[$cnt]['wr_id'] = $row2['wr_parent'];
 
             $cnt++;
+
+            run_event('bbs_move_copy', $row2, $move_bo_table, $insert_id, $next_wr_num, $sw);
         }
 
         sql_query(" update {$g5['board_table']} set bo_count_write = bo_count_write + '$count_write' where bo_table = '$move_bo_table' ");
         sql_query(" update {$g5['board_table']} set bo_count_comment = bo_count_comment + '$count_comment' where bo_table = '$move_bo_table' ");
-        
-        run_event('bbs_move_copy', $row2, $move_bo_table, $insert_id, $next_wr_num, $sw);
 
         delete_cache_latest($move_bo_table);
     }
@@ -234,7 +256,24 @@ if ($sw == 'move')
         sql_query(" delete from {$g5['board_new_table']} where bo_table = '$bo_table' and wr_id = '{$save[$i]['wr_id']}' ");
         sql_query(" delete from {$g5['board_file_table']} where bo_table = '$bo_table' and wr_id = '{$save[$i]['wr_id']}' ");
     }
-    sql_query(" update {$g5['board_table']} set bo_count_write = bo_count_write - '$save_count_write', bo_count_comment = bo_count_comment - '$save_count_comment' where bo_table = '$bo_table' ");
+
+    // 공지사항이 이동되는 경우의 처리 begin
+    $arr = array();
+    $sql = " select bo_notice from {$g5['board_table']} where bo_table = '{$bo_table}' ";
+    $row = sql_fetch($sql);
+    $arr_notice = explode(',', $row['bo_notice']);
+    for ($i=0; $i<count($arr_notice); $i++) {
+        $move_id = (int)$arr_notice[$i];
+        // 게시판에 wr_id 가 있다면 이동한게 아니므로 bo_notice 에 다시 넣음
+        $row2 = sql_fetch(" select count(*) as cnt from $write_table where wr_id = '{$move_id}' ");
+        if ($row2['cnt']) {
+            $arr[] = $move_id;
+        }
+        $bo_notice = implode(',', $arr);
+    }
+    // 공지사항이 이동되는 경우의 처리 end
+
+    sql_query(" update {$g5['board_table']} set bo_notice = '{$bo_notice}', bo_count_write = bo_count_write - '$save_count_write', bo_count_comment = bo_count_comment - '$save_count_comment' where bo_table = '$bo_table' ");
 }
 
 $msg = '해당 게시물을 선택한 게시판으로 '.$act.' 하였습니다.';

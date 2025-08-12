@@ -1,25 +1,29 @@
 <?php
-if (!defined('_GNUBOARD_')) exit;
+if (!defined('_GNUBOARD_')) {
+    exit;
+}
 
 $g5_debug['php']['begin_time'] = $begin_time = get_microtime();
 
-$files = glob(G5_ADMIN_PATH.'/css/admin_extend_*');
+$files = glob(G5_ADMIN_PATH . '/css/admin_extend_*');
 if (is_array($files)) {
-    foreach ((array) $files as $k=>$css_file) {
-        
+    foreach ((array) $files as $k => $css_file) {
+
         $fileinfo = pathinfo($css_file);
         $ext = $fileinfo['extension'];
-        
-        if( $ext !== 'css' ) continue;
-        
+
+        if ($ext !== 'css') {
+            continue;
+        }
+
         $css_file = str_replace(G5_ADMIN_PATH, G5_ADMIN_URL, $css_file);
-        add_stylesheet('<link rel="stylesheet" href="'.$css_file.'">', $k);
+        add_stylesheet('<link rel="stylesheet" href="' . $css_file . '">', $k);
     }
 }
 
-include_once(G5_PATH.'/head.sub.php');
+require_once G5_PATH . '/head.sub.php';
 
-function print_menu1($key, $no='')
+function print_menu1($key, $no = '')
 {
     global $menu;
 
@@ -28,35 +32,39 @@ function print_menu1($key, $no='')
     return $str;
 }
 
-function print_menu2($key, $no='')
+function print_menu2($key, $no = '')
 {
     global $menu, $auth_menu, $is_admin, $auth, $g5, $sub_menu;
 
     $str = "<ul>";
-    for($i=1; $i<count($menu[$key]); $i++)
-    {
-        if( ! isset($menu[$key][$i]) ){
+    for ($i = 1; $i < count($menu[$key]); $i++) {
+        if (!isset($menu[$key][$i])) {
             continue;
         }
 
-        if ($is_admin != 'super' && (!array_key_exists($menu[$key][$i][0],$auth) || !strstr($auth[$menu[$key][$i][0]], 'r')))
+        if ($is_admin != 'super' && (!array_key_exists($menu[$key][$i][0], $auth) || !strstr($auth[$menu[$key][$i][0]], 'r'))) {
             continue;
-        
+        }
+
         $gnb_grp_div = $gnb_grp_style = '';
 
-        if (isset($menu[$key][$i][4])){
-            if (($menu[$key][$i][4] == 1 && $gnb_grp_style == false) || ($menu[$key][$i][4] != 1 && $gnb_grp_style == true)) $gnb_grp_div = 'gnb_grp_div';
+        if (isset($menu[$key][$i][4])) {
+            if (($menu[$key][$i][4] == 1 && $gnb_grp_style == false) || ($menu[$key][$i][4] != 1 && $gnb_grp_style == true)) {
+                $gnb_grp_div = 'gnb_grp_div';
+            }
 
-            if ($menu[$key][$i][4] == 1) $gnb_grp_style = 'gnb_grp_style';
+            if ($menu[$key][$i][4] == 1) {
+                $gnb_grp_style = 'gnb_grp_style';
+            }
         }
 
         $current_class = '';
 
-        if ($menu[$key][$i][0] == $sub_menu){
+        if ($menu[$key][$i][0] == $sub_menu) {
             $current_class = ' on';
         }
 
-        $str .= '<li data-menu="'.$menu[$key][$i][0].'"><a href="'.$menu[$key][$i][2].'" class="gnb_2da '.$gnb_grp_style.' '.$gnb_grp_div.$current_class.'">'.$menu[$key][$i][1].'</a></li>';
+        $str .= '<li data-menu="' . $menu[$key][$i][0] . '"><a href="' . $menu[$key][$i][2] . '" class="gnb_2da ' . $gnb_grp_style . ' ' . $gnb_grp_div . $current_class . '">' . $menu[$key][$i][1] . '</a></li>';
 
         $auth_menu[$menu[$key][$i][0]] = $menu[$key][$i][1];
     }
@@ -66,40 +74,39 @@ function print_menu2($key, $no='')
 }
 
 $adm_menu_cookie = array(
-'container' => '',
-'gnb'       => '',
-'btn_gnb'   => '',
+    'container' => '',
+    'gnb'       => '',
+    'btn_gnb'   => '',
 );
 
-if( ! empty($_COOKIE['g5_admin_btn_gnb']) ){
-    #$adm_menu_cookie['container'] = 'container-small';
-	$adm_menu_cookie['container'] = '';
+if (!empty($_COOKIE['g5_admin_btn_gnb'])) {
+    $adm_menu_cookie['container'] = 'container-small';
     $adm_menu_cookie['gnb'] = 'gnb_small';
     $adm_menu_cookie['btn_gnb'] = 'btn_gnb_open';
 }
 ?>
 
 <script>
-var tempX = 0;
-var tempY = 0;
+    var g5_admin_csrf_token_key = "<?php echo (function_exists('admin_csrf_token_key')) ? admin_csrf_token_key() : ''; ?>";
+    var tempX = 0;
+    var tempY = 0;
 
-function imageview(id, w, h)
-{
+    function imageview(id, w, h) {
 
-    menu(id);
+        menu(id);
 
-    var el_id = document.getElementById(id);
+        var el_id = document.getElementById(id);
 
-    //submenu = eval(name+".style");
-    submenu = el_id.style;
-    submenu.left = tempX - ( w + 11 );
-    submenu.top  = tempY - ( h / 2 );
+        //submenu = eval(name+".style");
+        submenu = el_id.style;
+        submenu.left = tempX - (w + 11);
+        submenu.top = tempY - (h / 2);
 
-    selectBoxVisible();
+        selectBoxVisible();
 
-    if (el_id.style.display != 'none')
-        selectBoxHidden(id);
-}
+        if (el_id.style.display != 'none')
+            selectBoxHidden(id);
+    }
 </script>
 
 <div id="to_content"><a href="#container">본문 바로가기</a></div>
@@ -107,70 +114,58 @@ function imageview(id, w, h)
 <header id="hd">
     <h1><?php echo $config['cf_title'] ?></h1>
     <div id="hd_top">
-		<!--<button type="button" id="btn_gnb" class="btn_gnb_close <?php echo $adm_menu_cookie['btn_gnb'];?>">메뉴</button>-->
-		<div id="logo"><a href="<?php echo correct_goto_url(G5_ADMIN_URL); ?>"><img src="<?php echo G5_ADMIN_URL ?>/img_cd/admin_logo2.png" alt="<?php echo get_text($config['cf_title']); ?> 관리자"></a></div>
-		
-		<div id="tnb2">
-			<ul>
-				<li class="tnb_li"><a href="<?php echo G5_ADMIN_URL ?>/cd.member_list.php" class="tnb_service">회원정보관리</a></li>
-				<!--<li class="tnb_li"><a href="<?php echo G5_ADMIN_URL ?>/survey_list.php" class="tnb_service">설문관리</a></li>-->
-				<li class="tnb_li"><a href="<?php echo G5_ADMIN_URL ?>/belong_list.php" class="tnb_service">회원소속관리</a></li>
-				<li class="tnb_li"><a href="<?php echo G5_ADMIN_URL ?>/process_ce_list.php" class="tnb_service">과정관리</a></li>
-				<li class="tnb_li"><a href="<?php echo G5_ADMIN_URL ?>/board/board.php?bo_table=e_campaign" class="tnb_service">커뮤니티관리</a></li>
-				<li class="tnb_li"><a href="<?php echo G5_ADMIN_URL ?>/board/board.php?bo_table=schedule" class="tnb_service">일정관리</a></li>
-				<li class="tnb_li"><a href="<?php echo G5_ADMIN_URL ?>/learn_list.php" class="tnb_service">학습진도관리</a></li>
-				<li class="tnb_li"><a href="<?php echo G5_ADMIN_URL ?>/board/board.php?bo_table=notice" class="tnb_service">홈페이지관리</a></li>
-				<li class="tnb_li"><a href="<?php echo G5_ADMIN_URL ?>/point_list.php" class="tnb_service">마일리지관리</a></li>
-				<li class="tnb_li"><a href="<?php echo G5_ADMIN_URL ?>/config_form.php" class="tnb_service">시스템관리</a></li>
-			</ul>
-		</div>
-		
+        <button type="button" id="btn_gnb" class="btn_gnb_close <?php echo $adm_menu_cookie['btn_gnb']; ?>">메뉴</button>
+        <div id="logo"><a href="<?php echo correct_goto_url(G5_ADMIN_URL); ?>"><img src="<?php echo G5_ADMIN_URL ?>/img/logo.png" alt="<?php echo get_text($config['cf_title']); ?> 관리자"></a></div>
+
         <div id="tnb">
             <ul>
-				<li class="tnb_li"><a href="<?php echo G5_URL ?>/" class="tnb_community" target="_blank" title="홈페이지 바로가기">홈페이지 바로가기</a></li>
-                <!--<li class="tnb_li"><a href="<?php echo G5_ADMIN_URL ?>/service.php" class="tnb_service">부가서비스</a></li>
+                <?php if (defined('G5_USE_SHOP') && G5_USE_SHOP) { ?>
+                    <li class="tnb_li"><a href="<?php echo G5_SHOP_URL ?>/" class="tnb_shop" target="_blank" title="쇼핑몰 바로가기">쇼핑몰 바로가기</a></li>
+                <?php } ?>
+                <li class="tnb_li"><a href="<?php echo G5_URL ?>/" class="tnb_community" target="_blank" title="커뮤니티 바로가기">커뮤니티 바로가기</a></li>
+                <li class="tnb_li"><a href="<?php echo G5_ADMIN_URL ?>/service.php" class="tnb_service">부가서비스</a></li>
                 <li class="tnb_li"><button type="button" class="tnb_mb_btn">관리자<span class="./img/btn_gnb.png">메뉴열기</span></button>
                     <ul class="tnb_mb_area">
                         <li><a href="<?php echo G5_ADMIN_URL ?>/member_form.php?w=u&amp;mb_id=<?php echo $member['mb_id'] ?>">관리자정보</a></li>
                         <li id="tnb_logout"><a href="<?php echo G5_BBS_URL ?>/logout.php">로그아웃</a></li>
                     </ul>
-                </li>-->
-				<li class="tnb_li" id="tnb_logout"><a href="<?php echo G5_BBS_URL ?>/logout.php">로그아웃</a></li>
+                </li>
             </ul>
         </div>
     </div>
-    <nav id="gnb" class="gnb_large">
+    <nav id="gnb" class="gnb_large <?php echo $adm_menu_cookie['gnb']; ?>">
         <h2>관리자 주메뉴</h2>
         <ul class="gnb_ul">
             <?php
             $jj = 1;
-            foreach($amenu as $key=>$value) {
+            foreach ($amenu as $key => $value) {
                 $href1 = $href2 = '';
 
-                if ($menu['menu'.$key][0][2]) {
-                    $href1 = '<a href="'.$menu['menu'.$key][0][2].'" class="gnb_1da">';
+                if (isset($menu['menu' . $key][0][2]) && $menu['menu' . $key][0][2]) {
+                    $href1 = '<a href="' . $menu['menu' . $key][0][2] . '" class="gnb_1da">';
                     $href2 = '</a>';
                 } else {
                     continue;
                 }
 
                 $current_class = "";
-                if (isset($sub_menu) && (substr($sub_menu, 0, 3) == substr($menu['menu'.$key][0][0], 0, 3)))
+                if (isset($sub_menu) && (substr($sub_menu, 0, 3) == substr($menu['menu' . $key][0][0], 0, 3))) {
                     $current_class = " on";
+                }
 
-                $button_title = $menu['menu'.$key][0][1];
+                $button_title = $menu['menu' . $key][0][1];
             ?>
-            <li class="gnb_li<?php echo $current_class;?>">
-                <!--<button type="button" class="btn_op menu-<?php echo $key; ?> menu-order-<?php echo $jj; ?>" title="<?php echo $button_title; ?>"><?php echo $button_title;?></button>-->
-                <div class="gnb_oparea_wr">
-                    <div class="gnb_oparea">
-                        <h3><?php echo $menu['menu'.$key][0][1];?></h3>
-                        <?php echo print_menu1('menu'.$key, 1); ?>
+                <li class="gnb_li<?php echo $current_class; ?>">
+                    <button type="button" class="btn_op menu-<?php echo $key; ?> menu-order-<?php echo $jj; ?>" title="<?php echo $button_title; ?>"><?php echo $button_title; ?></button>
+                    <div class="gnb_oparea_wr">
+                        <div class="gnb_oparea">
+                            <h3><?php echo $menu['menu' . $key][0][1]; ?></h3>
+                            <?php echo print_menu1('menu' . $key, 1); ?>
+                        </div>
                     </div>
-                </div>
-            </li>
+                </li>
             <?php
-            $jj++;
+                $jj++;
             }     //end foreach
             ?>
         </ul>
@@ -178,39 +173,37 @@ function imageview(id, w, h)
 
 </header>
 <script>
-jQuery(function($){
+    jQuery(function($) {
 
-    var menu_cookie_key = 'g5_admin_btn_gnb';
+        var menu_cookie_key = 'g5_admin_btn_gnb';
 
-    $(".tnb_mb_btn").click(function(){
-        $(".tnb_mb_area").toggle();
+        $(".tnb_mb_btn").click(function() {
+            $(".tnb_mb_area").toggle();
+        });
+
+        $("#btn_gnb").click(function() {
+
+            var $this = $(this);
+
+            try {
+                if (!$this.hasClass("btn_gnb_open")) {
+                    set_cookie(menu_cookie_key, 1, 60 * 60 * 24 * 365);
+                } else {
+                    delete_cookie(menu_cookie_key);
+                }
+            } catch (err) {}
+
+            $("#container").toggleClass("container-small");
+            $("#gnb").toggleClass("gnb_small");
+            $this.toggleClass("btn_gnb_open");
+
+        });
+
+        $(".gnb_ul li .btn_op").click(function() {
+            $(this).parent().addClass("on").siblings().removeClass("on");
+        });
+
     });
-
-    $("#btn_gnb").click(function(){
-        
-        var $this = $(this);
-
-        try {
-            if( ! $this.hasClass("btn_gnb_open") ){
-                set_cookie(menu_cookie_key, 1, 60*60*24*365);
-            } else {
-                delete_cookie(menu_cookie_key);
-            }
-        }
-        catch(err) {
-        }
-
-        $("#container").toggleClass("container-small");
-        $("#gnb").toggleClass("gnb_small");
-        $this.toggleClass("btn_gnb_open");
-
-    });
-
-    $(".gnb_ul li .btn_op" ).click(function() {
-        $(this).parent().addClass("on").siblings().removeClass("on");
-    });
-
-});
 </script>
 
 

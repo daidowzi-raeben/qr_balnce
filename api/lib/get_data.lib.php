@@ -145,8 +145,14 @@ function get_content_by_field($write_table, $type='bbs', $where_field='', $where
 {
     global $g5, $g5_object;
 
+    static $cache = array();
+
+    $order_key = 'wr_id';
+
     if( $type === 'content' ){
         $check_array = array('co_id', 'co_html', 'co_subject', 'co_content', 'co_seo_title', 'co_mobile_content', 'co_skin', 'co_mobile_skin', 'co_tag_filter_use', 'co_hit', 'co_include_head', 'co_include_tail');
+
+        $order_key = 'co_id';
     } else {
         $check_array = array('wr_id', 'wr_num', 'wr_reply', 'wr_parent', 'wr_is_comment', 'ca_name', 'wr_option', 'wr_subject', 'wr_content', 'wr_seo_title', 'wr_link1', 'wr_link2', 'wr_hit', 'wr_good', 'wr_nogood', 'mb_id', 'wr_name', 'wr_email', 'wr_homepage', 'wr_datetime', 'wr_ip', 'wr_1', 'wr_2', 'wr_3', 'wr_4', 'wr_5', 'wr_6', 'wr_7', 'wr_8', 'wr_9', 'wr_10');
     }
@@ -162,7 +168,7 @@ function get_content_by_field($write_table, $type='bbs', $where_field='', $where
         return $cache[$key];
     }
 
-    $sql = " select * from {$write_table} where $where_field = '".sql_real_escape_string($where_value)."' ";
+    $sql = " select * from {$write_table} where $where_field = '".sql_real_escape_string($where_value)."' order by $order_key desc limit 1 ";
 
     $cache[$key] = sql_fetch($sql);
 
@@ -294,7 +300,7 @@ function get_thumbnail_find_cache($bo_table, $wr_id, $wr_key){
         return get_write($write_table, $wr_id, true);
     }
 
-    return get_board_file_db($bo_table, $wr_id, 'bf_file, bf_content', "and bf_type between '1' and '3'", true);
+    return get_board_file_db($bo_table, $wr_id, 'bf_file, bf_content', "and bf_type in (1, 2, 3, 18) ", true);
 }
 
 function get_write_table_name($bo_table){
@@ -394,7 +400,7 @@ function get_mb_icon_name($mb_id){
 // 생성되면 안되는 게시판명
 function get_bo_table_banned_word(){
 
-    $folders = array();
+    $folders = array(G5_CONTENT_DIR, 'rss');
 
     foreach(glob(G5_PATH.'/*', GLOB_ONLYDIR) as $dir) {
         $folders[] = basename($dir);
@@ -455,6 +461,20 @@ function get_board_sfl_select_options($sfl){
     $str .= '<option value="wr_name,0" '.get_selected($sfl, 'wr_name,0').'>글쓴이(코)</option>';
 
     return run_replace('get_board_sfl_select_options', $str, $sfl);
+}
+
+function get_qa_sfl_select_options($sfl) {
+
+    global $is_admin;
+
+    $str = '';
+    $str .= '<option value="qa_subject" '.get_selected($sfl, 'qa_subject', true).'>제목</option>';
+    $str .= '<option value="qa_content" '.get_selected($sfl, 'qa_content').'>내용</option>';
+    $str .= '<option value="qa_name" '.get_selected($sfl, 'qa_name').'>글쓴이</option>';
+    if ($is_admin)
+        $str .= '<option value="mb_id" '.get_selected($sfl, 'mb_id').'>회원아이디</option>';
+
+    return run_replace('get_qa_sfl_select_options', $str, $sfl);
 }
 
 // 읽지 않은 메모 갯수 반환
