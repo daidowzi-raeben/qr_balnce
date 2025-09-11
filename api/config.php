@@ -51,6 +51,7 @@ define('G5_DBCONFIG_FILE',  'dbconfig.php');
 
 define('G5_ADMIN_DIR',      'adm');
 define('G5_BBS_DIR',        'bbs');
+define('G5_BBS_DIR_ADM',        'adm/bbs');
 define('G5_CSS_DIR',        'css');
 define('G5_DATA_DIR',       'data');
 define('G5_EXTEND_DIR',     'extend');
@@ -92,8 +93,12 @@ if (isset($g5_path['path'])) {
     define('G5_PATH', '');
 }
 
+define('G5_ADM_BBS_URL',        G5_URL.'/'.G5_ADMIN_DIR.'/'.G5_BBS_DIR);
+define('G5_ADM_BBS_PATH',        G5_PATH.'/'.G5_ADMIN_DIR.'/'.G5_BBS_DIR);
+
 define('G5_ADMIN_URL',      G5_URL.'/'.G5_ADMIN_DIR);
 define('G5_BBS_URL',        G5_URL.'/'.G5_BBS_DIR);
+
 define('G5_CSS_URL',        G5_URL.'/'.G5_CSS_DIR);
 define('G5_DATA_URL',       G5_URL.'/'.G5_DATA_DIR);
 define('G5_IMG_URL',        G5_URL.'/'.G5_IMG_DIR);

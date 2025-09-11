@@ -8,7 +8,7 @@ define('G5_MYSQL_SET_MODE', false);
 
 define('G5_TABLE_PREFIX', 'qr_');
 
-define('G5_TOKEN_ENCRYPTION_KEY', '16a75d0025252ae5e7a15a2b77730a64'); // 토큰 암호화에 사용할 키
+define('G5_TOKEN_ENCRYPTION_KEY', 'b2c9dde8107c42620dbda48fb331a5b9'); // 토큰 암호화에 사용할 키
 
 $g5['write_prefix'] = G5_TABLE_PREFIX.'write_'; // 게시판 테이블명 접두사
 
@@ -46,7 +46,7 @@ $g5['member_cert_history_table'] = G5_TABLE_PREFIX.'member_cert_history'; // 본
 
 define('G5_USE_SHOP', true);
 
-define('G5_SHOP_TABLE_PREFIX', 'g5_shop_');
+define('G5_SHOP_TABLE_PREFIX', 'qr_shop_');
 
 $g5['g5_shop_default_table'] = G5_SHOP_TABLE_PREFIX.'default'; // 쇼핑몰설정 테이블
 $g5['g5_shop_banner_table'] = G5_SHOP_TABLE_PREFIX.'banner'; // 배너 테이블

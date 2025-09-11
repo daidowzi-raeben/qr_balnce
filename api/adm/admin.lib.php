@@ -3,6 +3,11 @@ if (!defined('_GNUBOARD_')) {
     exit;
 }
 
+
+
+define('G5_ADMIN_HTTP_BBS_URL',  https_url(G5_ADM_BBS_URL, false));
+define('G5_ADMIN_HTTPS_BBS_URL', https_url(G5_ADM_BBS_URL, true));
+
 /*
 // 081022 : CSRF 방지를 위해 코드를 작성했으나 효과가 없어 주석처리 함
 if (!get_session('ss_admin')) {
@@ -555,93 +560,97 @@ function admin_check_xss_params($params)
         if (is_array($value)) {
             admin_check_xss_params($value);
         } else if (
-            (preg_match('/<\s?[^\>]*\/?\s?>/i', $value) && (preg_match('/script.*?\/script/ius', $value) || preg_match('/on[a-z]+=*/ius', $value))) || preg_match('/^(?=.*token\()(?=.*xmlhttprequest\()(?=.*send\().*$/im', $value) || 
-            (preg_match('/(on[a-z]+|focus)=.*/ius', $value) && preg_match('/(eval|atob|fetch|expression|exec|prompt)(\s*)\((.*)\)/ius', $value))) {
-            alert('요청 쿼리에 잘못된 스크립트문장이 있습니다.\\nXSS 공격일수도 있습니다.', G5_URL);
-            die();
-        } else if (preg_match('/atob\s*\(\s*[\'"]?([a-zA-Z0-9+\/=]+)[\'"]?\s*\)/ius', $value, $matches)) {
-            $decoded = base64_decode($matches[1], true);
-            if ($decoded && preg_match('/(eval|fetch|script|alert|settimeout|setinterval)/ius', $decoded)) {
-                // error_log("Base64 XSS 시도 감지: key=$key, decoded=$decoded, IP=" . $_SERVER['REMOTE_ADDR']);
-                alert('Base64로 인코딩된 위험한 스크립트가 발견되었습니다.', G5_URL);
-                die();
-            }
-        }
-    }
+            (preg_match('/<\s?[^\>]*\/?\s?>/i', $value) && (preg_match('/script.*?\/script/ius', $value) ||
+preg_match('/on[a-z]+=*/ius', $value))) || preg_match('/^(?=.*token\()(?=.*xmlhttprequest\()(?=.*send\().*$/im', $value)
+||
+(preg_match('/(on[a-z]+|focus)=.*/ius', $value) &&
+preg_match('/(eval|atob|fetch|expression|exec|prompt)(\s*)\((.*)\)/ius', $value))) {
+alert('요청 쿼리에 잘못된 스크립트문장이 있습니다.\\nXSS 공격일수도 있습니다.', G5_URL);
+die();
+} else if (preg_match('/atob\s*\(\s*[\'"]?([a-zA-Z0-9+\/=]+)[\'"]?\s*\)/ius', $value, $matches)) {
+$decoded = base64_decode($matches[1], true);
+if ($decoded && preg_match('/(eval|fetch|script|alert|settimeout|setinterval)/ius', $decoded)) {
+// error_log("Base64 XSS 시도 감지: key=$key, decoded=$decoded, IP=" . $_SERVER['REMOTE_ADDR']);
+alert('Base64로 인코딩된 위험한 스크립트가 발견되었습니다.', G5_URL);
+die();
+}
+}
+}
 
-    return;
+return;
 }
 
 function admin_menu_find_by($call, $search_key)
 {
-    global $menu;
+global $menu;
 
-    static $cache_menu = array();
+static $cache_menu = array();
 
-    if (empty($cache_menu)) {
-        foreach ($menu as $k1 => $arr1) {
+if (empty($cache_menu)) {
+foreach ($menu as $k1 => $arr1) {
 
-            if (empty($arr1)) {
-                continue;
-            }
-            foreach ($arr1 as $k2 => $arr2) {
-                if (empty($arr2)) {
-                    continue;
-                }
+if (empty($arr1)) {
+continue;
+}
+foreach ($arr1 as $k2 => $arr2) {
+if (empty($arr2)) {
+continue;
+}
 
-                $menu_key = isset($arr2[3]) ? $arr2[3] : '';
-                if (empty($menu_key)) {
-                    continue;
-                }
+$menu_key = isset($arr2[3]) ? $arr2[3] : '';
+if (empty($menu_key)) {
+continue;
+}
 
-                $cache_menu[$menu_key] = array(
-                    'sub_menu' => $arr2[0],
-                    'title' => $arr2[1],
-                    'link' => $arr2[2],
-                );
-            }
-        }
-    }
+$cache_menu[$menu_key] = array(
+'sub_menu' => $arr2[0],
+'title' => $arr2[1],
+'link' => $arr2[2],
+);
+}
+}
+}
 
-    if (isset($cache_menu[$call]) && isset($cache_menu[$call][$search_key])) {
-        return $cache_menu[$call][$search_key];
-    }
+if (isset($cache_menu[$call]) && isset($cache_menu[$call][$search_key])) {
+return $cache_menu[$call][$search_key];
+}
 
-    return '';
+return '';
 }
 
 // 접근 권한 검사
 if (!$member['mb_id']) {
-    alert('로그인 하십시오.', G5_BBS_URL . '/login.php?url=' . urlencode(correct_goto_url(G5_ADMIN_URL)));
+alert('로그인 하십시오.', G5_BBS_URL . '/login.php?url=' . urlencode(correct_goto_url(G5_ADMIN_URL)));
 } else if ($is_admin != 'super') {
-    $auth = array();
-    $sql = " select au_menu, au_auth from {$g5['auth_table']} where mb_id = '{$member['mb_id']}' ";
-    $result = sql_query($sql);
-    for ($i = 0; $row = sql_fetch_array($result); $i++) {
-        $auth[$row['au_menu']] = $row['au_auth'];
-    }
+$auth = array();
+$sql = " select au_menu, au_auth from {$g5['auth_table']} where mb_id = '{$member['mb_id']}' ";
+$result = sql_query($sql);
+for ($i = 0; $row = sql_fetch_array($result); $i++) {
+$auth[$row['au_menu']] = $row['au_auth'];
+}
 
-    if (!$i) {
-        alert('최고관리자 또는 관리권한이 있는 회원만 접근 가능합니다.', G5_URL);
-    }
+if (!$i) {
+alert('최고관리자 또는 관리권한이 있는 회원만 접근 가능합니다.', G5_URL);
+}
 }
 
 // 관리자의 클라이언트를 검증하여 일치하지 않으면 세션을 끊고 관리자에게 메일을 보낸다.
 if (!verify_mb_key($member)) {
-    session_destroy();
+session_destroy();
 
-    include_once G5_LIB_PATH . '/mailer.lib.php';
+include_once G5_LIB_PATH . '/mailer.lib.php';
 
-    // 메일 알림
-    mailer($member['mb_nick'], $member['mb_email'], $member['mb_email'], 'XSS 공격 알림', $_SERVER['REMOTE_ADDR'] . ' 아이피로 XSS 공격이 있었습니다.<br><br>관리자 권한을 탈취하려는 접근이므로 주의하시기 바랍니다.<br><br>해당 아이피는 차단하시고 의심되는 게시물이 있는지 확인하시기 바랍니다.' . G5_URL, 0);
+// 메일 알림
+mailer($member['mb_nick'], $member['mb_email'], $member['mb_email'], 'XSS 공격 알림', $_SERVER['REMOTE_ADDR'] . ' 아이피로 XSS
+공격이 있었습니다.<br><br>관리자 권한을 탈취하려는 접근이므로 주의하시기 바랍니다.<br><br>해당 아이피는 차단하시고 의심되는 게시물이 있는지 확인하시기 바랍니다.' . G5_URL, 0);
 
-    alert_close('정상적으로 로그인하여 접근하시기 바랍니다.');
+alert_close('정상적으로 로그인하여 접근하시기 바랍니다.');
 }
 
 if (isset($auth) && is_array($auth)) {
-    @ksort($auth);
+@ksort($auth);
 } else {
-    $auth = array();
+$auth = array();
 }
 
 // 가변 메뉴
@@ -651,51 +660,51 @@ unset($amenu);
 $tmp = dir(G5_ADMIN_PATH);
 $menu_files = array();
 while ($entry = $tmp->read()) {
-    if (!preg_match('/^admin.menu([0-9]{3}).*\.php$/', $entry, $m)) {
-        continue;  // 파일명이 menu 으로 시작하지 않으면 무시한다.
-    }
+if (!preg_match('/^admin.menu([0-9]{3}).*\.php$/', $entry, $m)) {
+continue; // 파일명이 menu 으로 시작하지 않으면 무시한다.
+}
 
-    $amenu[$m[1]] = $entry;
-    $menu_files[] = G5_ADMIN_PATH . '/' . $entry;
+$amenu[$m[1]] = $entry;
+$menu_files[] = G5_ADMIN_PATH . '/' . $entry;
 }
 @asort($menu_files);
 foreach ($menu_files as $file) {
-    include_once $file;
+include_once $file;
 }
 @ksort($amenu);
 
 $amenu = run_replace('admin_amenu', $amenu);
 if (isset($menu) && $menu) {
-    $menu = run_replace('admin_menu', $menu);
+$menu = run_replace('admin_menu', $menu);
 }
 
 $arr_query = array();
 if (isset($sst)) {
-    $arr_query[] = 'sst=' . $sst;
+$arr_query[] = 'sst=' . $sst;
 }
 if (isset($sod)) {
-    $arr_query[] = 'sod=' . $sod;
+$arr_query[] = 'sod=' . $sod;
 }
 if (isset($sfl)) {
-    $arr_query[] = 'sfl=' . $sfl;
+$arr_query[] = 'sfl=' . $sfl;
 }
 if (isset($stx)) {
-    $arr_query[] = 'stx=' . $stx;
+$arr_query[] = 'stx=' . $stx;
 }
 if (isset($page)) {
-    $arr_query[] = 'page=' . $page;
+$arr_query[] = 'page=' . $page;
 }
 $qstr = implode("&amp;", $arr_query);
 
 if (isset($_REQUEST) && $_REQUEST) {
-    if (admin_referer_check(true)) {
-        admin_check_xss_params($_REQUEST);
-    }
+if (admin_referer_check(true)) {
+admin_check_xss_params($_REQUEST);
+}
 }
 
 // 관리자에서는 추가 스크립트와 추가 매타태그, 방문자분석 스크립트가 실행되지 않게 빈값으로 합니다.
 if (run_replace('safe_admin_add_script_boolean', false) === false) {
-    $config['cf_analytics'] = '';
-    $config['cf_add_script'] = '';
-    $config['cf_add_meta'] = '';
+$config['cf_analytics'] = '';
+$config['cf_add_script'] = '';
+$config['cf_add_meta'] = '';
 }

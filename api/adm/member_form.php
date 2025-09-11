@@ -214,7 +214,8 @@ require_once './admin.head.php';
 add_javascript(G5_POSTCODE_JS, 0);    //다음 주소 js
 ?>
 
-<form name="fmember" id="fmember" action="./member_form_update.php" onsubmit="return fmember_submit(this);" method="post" enctype="multipart/form-data">
+<form name="fmember" id="fmember" action="./member_form_update.php" onsubmit="return fmember_submit(this);"
+    method="post" enctype="multipart/form-data">
     <input type="hidden" name="w" value="<?php echo $w ?>">
     <input type="hidden" name="sfl" value="<?php echo $sfl ?>">
     <input type="hidden" name="stx" value="<?php echo $stx ?>">
@@ -234,67 +235,91 @@ add_javascript(G5_POSTCODE_JS, 0);    //다음 주소 js
             </colgroup>
             <tbody>
                 <tr>
-                    <th scope="row"><label for="mb_id">아이디<?php echo $sound_only ?></label></th>
+                    <th scope="row">
+                        <label for="mb_id">사번<?php echo $sound_only ?></label>
+                    </th>
                     <td>
-                        <input type="text" name="mb_id" value="<?php echo $mb['mb_id'] ?>" id="mb_id" <?php echo $required_mb_id ?> class="frm_input <?php echo $required_mb_id_class ?>" size="15" maxlength="20">
-                        <?php if ($w == 'u') { ?><a href="./boardgroupmember_form.php?mb_id=<?php echo $mb['mb_id'] ?>" class="btn_frmline">접근가능그룹보기</a><?php } ?>
+                        <input type="text" name="mb_id" value="<?php echo $mb['mb_id'] ?>" id="mb_id"
+                            <?php echo $required_mb_id ?> class="frm_input <?php echo $required_mb_id_class ?>"
+                            size="15" maxlength="20">
+                        <?php if ($w == 'u') { ?><a href="./boardgroupmember_form.php?mb_id=<?php echo $mb['mb_id'] ?>"
+                            class="btn_frmline">접근가능그룹보기</a><?php } ?>
                     </td>
-                    <th scope="row"><label for="mb_password">비밀번호<?php echo $sound_only ?></label></th>
-                    <td>
-                        <div>
-                        <input type="password" name="mb_password" id="mb_password" <?php echo $required_mb_password ?> class="frm_input <?php echo $required_mb_password ?>" size="15" maxlength="20">
-                        </div>
-                        <div id="mb_password_captcha_wrap" style="display:none">
-                            <?php
-                            require_once G5_CAPTCHA_PATH . '/captcha.lib.php';
-                            $captcha_html = captcha_html();
-                            $captcha_js   = chk_captcha_js();
-                            echo $captcha_html;
-                            ?>
-                        </div>
-                    </td>
+                    <th scope="row"><label for="mb_email">소속<?php echo $sound_only ?></label></th>
+
+
+                    <input type="hidden" name="mb_email" value="<?php echo $mb['mb_email'] ?>" id="mb_email"
+                        class="frm_input <?php echo $required_mb_email_class ?>" size="15" maxlength="20">
+                    <td colspan=""><input type="text" name="mb_6" value="<?php echo $mb['mb_6'] ?>" id="mb_6"
+                            class="frm_input" size="30" maxlength="255"></td>
+
                 </tr>
                 <tr>
-                    <th scope="row"><label for="mb_name">이름(실명)<strong class="sound_only">필수</strong></label></th>
-                    <td><input type="text" name="mb_name" value="<?php echo $mb['mb_name'] ?>" id="mb_name" required class="required frm_input" size="15" maxlength="20"></td>
+                    <th scope="row"><label for="mb_name">이름<strong class="sound_only">필수</strong></label></th>
+                    <td><input type="text" name="mb_name" value="<?php echo $mb['mb_name'] ?>" id="mb_name" required
+                            class="required frm_input" size="15" maxlength="20"></td>
                     <th scope="row"><label for="mb_nick">닉네임<strong class="sound_only">필수</strong></label></th>
-                    <td><input type="text" name="mb_nick" value="<?php echo $mb['mb_nick'] ?>" id="mb_nick" required class="required frm_input" size="15" maxlength="20"></td>
+                    <td><input type="text" name="mb_nick" value="<?php echo $mb['mb_nick'] ?>" id="mb_nick" required
+                            class="required frm_input" size="15" maxlength="20"></td>
                 </tr>
-                <tr>
+                <!-- <tr>
                     <th scope="row"><label for="mb_level">회원 권한</label></th>
                     <td><?php echo get_member_level_select('mb_level', 1, $member['mb_level'], $mb['mb_level']) ?></td>
                     <th scope="row">포인트</th>
                     <td><a href="./point_list.php?sfl=mb_id&amp;stx=<?php echo $mb['mb_id'] ?>" target="_blank"><?php echo number_format($mb['mb_point']) ?></a> 점</td>
-                </tr>
+                </tr> -->
                 <tr>
-                    <th scope="row"><label for="mb_email">E-mail<strong class="sound_only">필수</strong></label></th>
-                    <td><input type="text" name="mb_email" value="<?php echo $mb['mb_email'] ?>" id="mb_email" maxlength="100" required class="required frm_input email" size="30"></td>
-                    <th scope="row"><label for="mb_homepage">홈페이지</label></th>
-                    <td><input type="text" name="mb_homepage" value="<?php echo $mb['mb_homepage'] ?>" id="mb_homepage" class="frm_input" maxlength="255" size="15"></td>
-                </tr>
-                <tr>
-                    <th scope="row"><label for="mb_hp">휴대폰번호</label></th>
-                    <td><input type="text" name="mb_hp" value="<?php echo $mb['mb_hp'] ?>" id="mb_hp" class="frm_input" size="15" maxlength="20"></td>
-                    <th scope="row"><label for="mb_tel">전화번호</label></th>
-                    <td><input type="text" name="mb_tel" value="<?php echo $mb['mb_tel'] ?>" id="mb_tel" class="frm_input" size="15" maxlength="20"></td>
-                </tr>
-                <tr>
-                    <th scope="row">본인확인방법</th>
-                    <td colspan="3">
-                        <input type="radio" name="mb_certify_case" value="simple" id="mb_certify_sa" <?php if ($mb['mb_certify'] == 'simple') { echo 'checked="checked"'; } ?>>
-                        <label for="mb_certify_sa">간편인증</label>
-                        <input type="radio" name="mb_certify_case" value="hp" id="mb_certify_hp" <?php if ($mb['mb_certify'] == 'hp') { echo 'checked="checked"'; } ?>>
-                        <label for="mb_certify_hp">휴대폰</label>
-                        <input type="radio" name="mb_certify_case" value="ipin" id="mb_certify_ipin" <?php if ($mb['mb_certify'] == 'ipin') { echo 'checked="checked"'; } ?>>
-                        <label for="mb_certify_ipin">아이핀</label>
+                    <!-- <th scope="row"><label for="mb_email">E-mail<strong class="sound_only">필수</strong></label></th>
+                    <td><input type="text" name="mb_email" value="<?php echo $mb['mb_email'] ?>" id="mb_email"
+                            maxlength="100" required class="required frm_input email" size="30"></td> -->
+                    <th scope="row"><label for="mb_homepage">년도</label></th>
+                    <td><input type="text" name="mb_homepage"
+                            value="<?php echo $mb['mb_homepage'] ? $mb['mb_homepage'] : date("Y") ?>" id="mb_homepage"
+                            class="frm_input" maxlength="255" size="15"></td>
+
+                    <th scope="row">유형</th>
+                    <td colspan="">
+                        <input type="radio" name="mb_5" value="공공" id="mb_5_sa"
+                            <?php if ($mb['mb_5'] == '공공') { echo 'checked="checked"'; } ?>>
+                        <label for="mb_5_sa">공공</label>
+                        <input type="radio" name="mb_5" value="기업" id="mb_5_hp"
+                            <?php if ($mb['mb_5'] == '기업') { echo 'checked="checked"'; } ?>>
+                        <label for="mb_5_hp">기업</label>
+                        <!-- <input type="radio" name="mb_certify_case" value="ipin" id="mb_certify_ipin"
+                            <?php if ($mb['mb_certify'] == 'ipin') { echo 'checked="checked"'; } ?>>
+                        <label for="mb_certify_ipin">아이핀</label> -->
                     </td>
                 </tr>
                 <tr>
+                    <th scope="row"><label for="mb_7">분야</label></th>
+                    <td><input type="text" name="mb_7" value="<?php echo $mb['mb_7'] ?>" id="mb_7" class="frm_input"
+                            size="15" maxlength="20"></td>
+                    <th scope="row"><label for="mb_tel">전화번호</label></th>
+                    <td><input type="text" name="mb_tel" value="<?php echo $mb['mb_tel'] ?>" id="mb_tel"
+                            class="frm_input" size="15" maxlength="20"></td>
+                </tr>
+                <!-- <tr>
+                    <th scope="row">유형</th>
+                    <td colspan="3">
+                        <input type="radio" name="mb_certify_case" value="simple" id="mb_certify_sa"
+                            <?php if ($mb['mb_certify'] == 'simple') { echo 'checked="checked"'; } ?>>
+                        <label for="mb_certify_sa">공공</label>
+                        <input type="radio" name="mb_certify_case" value="hp" id="mb_certify_hp"
+                            <?php if ($mb['mb_certify'] == 'hp') { echo 'checked="checked"'; } ?>>
+                        <label for="mb_certify_hp">기업</label>
+                        <input type="radio" name="mb_certify_case" value="ipin" id="mb_certify_ipin"
+                            <?php if ($mb['mb_certify'] == 'ipin') { echo 'checked="checked"'; } ?>>
+                        <label for="mb_certify_ipin">아이핀</label>
+                    </td>
+                </tr> -->
+                <!-- <tr>
                     <th scope="row">본인확인</th>
                     <td>
-                        <input type="radio" name="mb_certify" value="1" id="mb_certify_yes" <?php echo $mb_certify_yes; ?>>
+                        <input type="radio" name="mb_certify" value="1" id="mb_certify_yes"
+                            <?php echo $mb_certify_yes; ?>>
                         <label for="mb_certify_yes">예</label>
-                        <input type="radio" name="mb_certify" value="0" id="mb_certify_no" <?php echo $mb_certify_no; ?>>
+                        <input type="radio" name="mb_certify" value="0" id="mb_certify_no"
+                            <?php echo $mb_certify_no; ?>>
                         <label for="mb_certify_no">아니오</label>
                     </td>
                     <th scope="row">성인인증</th>
@@ -309,19 +334,25 @@ add_javascript(G5_POSTCODE_JS, 0);    //다음 주소 js
                     <th scope="row">주소</th>
                     <td colspan="3" class="td_addr_line">
                         <label for="mb_zip" class="sound_only">우편번호</label>
-                        <input type="text" name="mb_zip" value="<?php echo $mb['mb_zip1'] . $mb['mb_zip2']; ?>" id="mb_zip" class="frm_input readonly" size="5" maxlength="6">
-                        <button type="button" class="btn_frmline" onclick="win_zip('fmember', 'mb_zip', 'mb_addr1', 'mb_addr2', 'mb_addr3', 'mb_addr_jibeon');">주소 검색</button><br>
-                        <input type="text" name="mb_addr1" value="<?php echo $mb['mb_addr1'] ?>" id="mb_addr1" class="frm_input readonly" size="60">
+                        <input type="text" name="mb_zip" value="<?php echo $mb['mb_zip1'] . $mb['mb_zip2']; ?>"
+                            id="mb_zip" class="frm_input readonly" size="5" maxlength="6">
+                        <button type="button" class="btn_frmline"
+                            onclick="win_zip('fmember', 'mb_zip', 'mb_addr1', 'mb_addr2', 'mb_addr3', 'mb_addr_jibeon');">주소
+                            검색</button><br>
+                        <input type="text" name="mb_addr1" value="<?php echo $mb['mb_addr1'] ?>" id="mb_addr1"
+                            class="frm_input readonly" size="60">
                         <label for="mb_addr1">기본주소</label><br>
-                        <input type="text" name="mb_addr2" value="<?php echo $mb['mb_addr2'] ?>" id="mb_addr2" class="frm_input" size="60">
+                        <input type="text" name="mb_addr2" value="<?php echo $mb['mb_addr2'] ?>" id="mb_addr2"
+                            class="frm_input" size="60">
                         <label for="mb_addr2">상세주소</label>
                         <br>
-                        <input type="text" name="mb_addr3" value="<?php echo $mb['mb_addr3'] ?>" id="mb_addr3" class="frm_input" size="60">
+                        <input type="text" name="mb_addr3" value="<?php echo $mb['mb_addr3'] ?>" id="mb_addr3"
+                            class="frm_input" size="60">
                         <label for="mb_addr3">참고항목</label>
                         <input type="hidden" name="mb_addr_jibeon" value="<?php echo $mb['mb_addr_jibeon']; ?>"><br>
                     </td>
-                </tr>
-                <tr>
+                </tr> -->
+                <!-- <tr>
                     <th scope="row"><label for="mb_icon">회원아이콘</label></th>
                     <td colspan="3">
                         <?php echo help('이미지 크기는 <strong>넓이 ' . $config['cf_member_icon_width'] . '픽셀 높이 ' . $config['cf_member_icon_height'] . '픽셀</strong>로 해주세요.') ?>
@@ -356,9 +387,11 @@ add_javascript(G5_POSTCODE_JS, 0);    //다음 주소 js
                 <tr>
                     <th scope="row">메일 수신</th>
                     <td>
-                        <input type="radio" name="mb_mailling" value="1" id="mb_mailling_yes" <?php echo $mb_mailling_yes; ?>>
+                        <input type="radio" name="mb_mailling" value="1" id="mb_mailling_yes"
+                            <?php echo $mb_mailling_yes; ?>>
                         <label for="mb_mailling_yes">예</label>
-                        <input type="radio" name="mb_mailling" value="0" id="mb_mailling_no" <?php echo $mb_mailling_no; ?>>
+                        <input type="radio" name="mb_mailling" value="0" id="mb_mailling_no"
+                            <?php echo $mb_mailling_no; ?>>
                         <label for="mb_mailling_no">아니오</label>
                     </td>
                     <th scope="row"><label for="mb_sms_yes">SMS 수신</label></th>
@@ -380,17 +413,44 @@ add_javascript(G5_POSTCODE_JS, 0);    //다음 주소 js
                 </tr>
                 <tr>
                     <th scope="row"><label for="mb_signature">서명</label></th>
-                    <td colspan="3"><textarea name="mb_signature" id="mb_signature"><?php echo html_purifier($mb['mb_signature']); ?></textarea></td>
+                    <td colspan="3"><textarea name="mb_signature"
+                            id="mb_signature"><?php echo html_purifier($mb['mb_signature']); ?></textarea></td>
                 </tr>
                 <tr>
                     <th scope="row"><label for="mb_profile">자기 소개</label></th>
-                    <td colspan="3"><textarea name="mb_profile" id="mb_profile"><?php echo html_purifier($mb['mb_profile']); ?></textarea></td>
+                    <td colspan="3"><textarea name="mb_profile"
+                            id="mb_profile"><?php echo html_purifier($mb['mb_profile']); ?></textarea></td>
+                </tr> -->
+                <tr>
+                    <th scope="row"><label for="mb_1">부서1</label></th>
+                    <td colspan=""><input type="text" name="mb_1" value="<?php echo $mb['mb_1'] ?>" id="mb_1"
+                            class="frm_input" size="30" maxlength="255"></td>
+                    <th scope="row"><label for="mb_2">부서2</label></th>
+                    <td colspan=""><input type="text" name="mb_2" value="<?php echo $mb['mb_2'] ?>" id="mb_2"
+                            class="frm_input" size="30" maxlength="255"></td>
+                </tr>
+                <tr>
+                    <th scope="row"><label for="mb_3">부서3</label></th>
+                    <td colspan=""><input type="text" name="mb_3" value="<?php echo $mb['mb_3'] ?>" id="mb_3"
+                            class="frm_input" size="30" maxlength="255"></td>
+                    <th scope="row"><label for="mb_3">직급</label></th>
+                    <td colspan=""><input type="text" name="mb_3" value="<?php echo $mb['mb_3'] ?>" id="mb_3"
+                            class="frm_input" size="30" maxlength="255"></td>
+                </tr>
+                <tr>
+                    <th scope="row"><label for="mb_4">직책</label></th>
+                    <td colspan="3"><input type="text" name="mb_4" value="<?php echo $mb['mb_4'] ?>" id="mb_4"
+                            class="frm_input" size="30" maxlength="255"></td>
+                    <!-- <th scope="row"><label for="mb_1"></label></th>
+                    <td colspan=""><input type="text" name="mb_1" value="<?php echo $mb['mb_1'] ?>" id="mb_1"
+                            class="frm_input" size="30" maxlength="255"></td> -->
                 </tr>
                 <tr>
                     <th scope="row"><label for="mb_memo">메모</label></th>
-                    <td colspan="3"><textarea name="mb_memo" id="mb_memo"><?php echo html_purifier($mb['mb_memo']); ?></textarea></td>
+                    <td colspan="3"><textarea name="mb_memo"
+                            id="mb_memo"><?php echo html_purifier($mb['mb_memo']); ?></textarea></td>
                 </tr>
-                <tr>
+                <!-- <tr>
                     <th scope="row"><label for="mb_cert_history">본인인증 내역</label></th>
                     <td colspan="3">
                         <?php
@@ -410,66 +470,72 @@ add_javascript(G5_POSTCODE_JS, 0);    //다음 주소 js
                                     break;
                             }
                         ?>
-                            <div>
-                                [<?php echo $row['ch_datetime']; ?>]
-                                <?php echo $row['mb_id']; ?> /
-                                <?php echo $row['ch_name']; ?> /
-                                <?php echo $row['ch_hp']; ?> /
-                                <?php echo $cert_type; ?>
-                            </div>
+                        <div>
+                            [<?php echo $row['ch_datetime']; ?>]
+                            <?php echo $row['mb_id']; ?> /
+                            <?php echo $row['ch_name']; ?> /
+                            <?php echo $row['ch_hp']; ?> /
+                            <?php echo $cert_type; ?>
+                        </div>
                         <?php } ?>
 
                         <?php if ($cnt == 0) { ?>
-                            본인인증 내역이 없습니다.
+                        본인인증 내역이 없습니다.
                         <?php } ?>
                     </td>
                 </tr>
 
                 <?php if ($w == 'u') { ?>
-                    <tr>
-                        <th scope="row">회원가입일</th>
-                        <td><?php echo $mb['mb_datetime'] ?></td>
-                        <th scope="row">최근접속일</th>
-                        <td><?php echo $mb['mb_today_login'] ?></td>
-                    </tr>
-                    <tr>
-                        <th scope="row">IP</th>
-                        <td colspan="3"><?php echo $mb['mb_ip'] ?></td>
-                    </tr>
-                    <?php if ($config['cf_use_email_certify']) { ?>
-                        <tr>
-                            <th scope="row">인증일시</th>
-                            <td colspan="3">
-                                <?php if ($mb['mb_email_certify'] == '0000-00-00 00:00:00') { ?>
-                                    <?php echo help('회원님이 메일을 수신할 수 없는 경우 등에 직접 인증처리를 하실 수 있습니다.') ?>
-                                    <input type="checkbox" name="passive_certify" id="passive_certify">
-                                    <label for="passive_certify">수동인증</label>
-                                <?php } else { ?>
-                                    <?php echo $mb['mb_email_certify'] ?>
-                                <?php } ?>
-                            </td>
-                        </tr>
-                    <?php } ?>
+                <tr>
+                    <th scope="row">회원가입일</th>
+                    <td><?php echo $mb['mb_datetime'] ?></td>
+                    <th scope="row">최근접속일</th>
+                    <td><?php echo $mb['mb_today_login'] ?></td>
+                </tr>
+                <tr>
+                    <th scope="row">IP</th>
+                    <td colspan="3"><?php echo $mb['mb_ip'] ?></td>
+                </tr>
+                <?php if ($config['cf_use_email_certify']) { ?>
+                <tr>
+                    <th scope="row">인증일시</th>
+                    <td colspan="3">
+                        <?php if ($mb['mb_email_certify'] == '0000-00-00 00:00:00') { ?>
+                        <?php echo help('회원님이 메일을 수신할 수 없는 경우 등에 직접 인증처리를 하실 수 있습니다.') ?>
+                        <input type="checkbox" name="passive_certify" id="passive_certify">
+                        <label for="passive_certify">수동인증</label>
+                        <?php } else { ?>
+                        <?php echo $mb['mb_email_certify'] ?>
+                        <?php } ?>
+                    </td>
+                </tr>
+                <?php } ?>
                 <?php } ?>
 
                 <?php if ($config['cf_use_recommend']) { // 추천인 사용 ?>
-                    <tr>
-                        <th scope="row">추천인</th>
-                        <td colspan="3"><?php echo ((isset($mb['mb_recommend']) && $mb['mb_recommend']) ? get_text($mb['mb_recommend']) : '없음'); // 081022 : CSRF 보안 결함으로 인한 코드 수정 ?></td>
-                    </tr>
+                <tr>
+                    <th scope="row">추천인</th>
+                    <td colspan="3">
+                        <?php echo ((isset($mb['mb_recommend']) && $mb['mb_recommend']) ? get_text($mb['mb_recommend']) : '없음'); // 081022 : CSRF 보안 결함으로 인한 코드 수정 ?>
+                    </td>
+                </tr>
                 <?php } ?>
 
                 <tr>
                     <th scope="row"><label for="mb_leave_date">탈퇴일자</label></th>
                     <td>
-                        <input type="text" name="mb_leave_date" value="<?php echo $mb['mb_leave_date'] ?>" id="mb_leave_date" class="frm_input" maxlength="8">
-                        <input type="checkbox" value="<?php echo date("Ymd"); ?>" id="mb_leave_date_set_today" onclick="if (this.form.mb_leave_date.value==this.form.mb_leave_date.defaultValue) { this.form.mb_leave_date.value=this.value; } else { this.form.mb_leave_date.value=this.form.mb_leave_date.defaultValue; }">
+                        <input type="text" name="mb_leave_date" value="<?php echo $mb['mb_leave_date'] ?>"
+                            id="mb_leave_date" class="frm_input" maxlength="8">
+                        <input type="checkbox" value="<?php echo date("Ymd"); ?>" id="mb_leave_date_set_today"
+                            onclick="if (this.form.mb_leave_date.value==this.form.mb_leave_date.defaultValue) { this.form.mb_leave_date.value=this.value; } else { this.form.mb_leave_date.value=this.form.mb_leave_date.defaultValue; }">
                         <label for="mb_leave_date_set_today">탈퇴일을 오늘로 지정</label>
                     </td>
                     <th scope="row">접근차단일자</th>
                     <td>
-                        <input type="text" name="mb_intercept_date" value="<?php echo $mb['mb_intercept_date'] ?>" id="mb_intercept_date" class="frm_input" maxlength="8">
-                        <input type="checkbox" value="<?php echo date("Ymd"); ?>" id="mb_intercept_date_set_today" onclick="if (this.form.mb_intercept_date.value==this.form.mb_intercept_date.defaultValue) { this.form.mb_intercept_date.value=this.value; } else { this.form.mb_intercept_date.value=this.form.mb_intercept_date.defaultValue; }">
+                        <input type="text" name="mb_intercept_date" value="<?php echo $mb['mb_intercept_date'] ?>"
+                            id="mb_intercept_date" class="frm_input" maxlength="8">
+                        <input type="checkbox" value="<?php echo date("Ymd"); ?>" id="mb_intercept_date_set_today"
+                            onclick="if (this.form.mb_intercept_date.value==this.form.mb_intercept_date.defaultValue) { this.form.mb_intercept_date.value=this.value; } else { this.form.mb_intercept_date.value=this.form.mb_intercept_date.defaultValue; }">
                         <label for="mb_intercept_date_set_today">접근차단일을 오늘로 지정</label>
                     </td>
                 </tr>
@@ -478,13 +544,13 @@ add_javascript(G5_POSTCODE_JS, 0);    //다음 주소 js
                 //소셜계정이 있다면
                 if (function_exists('social_login_link_account') && $mb['mb_id']) {
                     if ($my_social_accounts = social_login_link_account($mb['mb_id'], false, 'get_data')) { ?>
-                        <tr>
-                            <th>소셜계정목록</th>
-                            <td colspan="3">
-                                <ul class="social_link_box">
-                                    <li class="social_login_container">
-                                        <h4>연결된 소셜 계정 목록</h4>
-                                        <?php foreach ($my_social_accounts as $account) {     //반복문
+                <tr>
+                    <th>소셜계정목록</th>
+                    <td colspan="3">
+                        <ul class="social_link_box">
+                            <li class="social_login_container">
+                                <h4>연결된 소셜 계정 목록</h4>
+                                <?php foreach ($my_social_accounts as $account) {     //반복문
                                             if (empty($account)) {
                                                 continue;
                                             }
@@ -492,85 +558,94 @@ add_javascript(G5_POSTCODE_JS, 0);    //다음 주소 js
                                             $provider = strtolower($account['provider']);
                                             $provider_name = social_get_provider_service_name($provider);
                                         ?>
-                                            <div class="account_provider" data-mpno="social_<?php echo $account['mp_no']; ?>">
-                                                <div class="sns-wrap-32 sns-wrap-over">
-                                                    <span class="sns-icon sns-<?php echo $provider; ?>" title="<?php echo $provider_name; ?>">
-                                                        <span class="ico"></span>
-                                                        <span class="txt"><?php echo $provider_name; ?></span>
-                                                    </span>
+                                <div class="account_provider" data-mpno="social_<?php echo $account['mp_no']; ?>">
+                                    <div class="sns-wrap-32 sns-wrap-over">
+                                        <span class="sns-icon sns-<?php echo $provider; ?>"
+                                            title="<?php echo $provider_name; ?>">
+                                            <span class="ico"></span>
+                                            <span class="txt"><?php echo $provider_name; ?></span>
+                                        </span>
 
-                                                    <span class="provider_name"><?php echo $provider_name;   //서비스이름 ?> ( <?php echo $account['displayname']; ?> )</span>
-                                                    <span class="account_hidden" style="display:none"><?php echo $account['mb_id']; ?></span>
-                                                </div>
-                                                <div class="btn_info"><a href="<?php echo G5_SOCIAL_LOGIN_URL . '/unlink.php?mp_no=' . $account['mp_no'] ?>" class="social_unlink" data-provider="<?php echo $account['mp_no']; ?>">연동해제</a> <span class="sound_only"><?php echo substr($account['mp_register_day'], 2, 14); ?></span></div>
-                                            </div>
-                                        <?php } //end foreach ?>
-                                    </li>
-                                </ul>
-                                <script>
-                                    jQuery(function($) {
-                                        $(".account_provider").on("click", ".social_unlink", function(e) {
-                                            e.preventDefault();
+                                        <span class="provider_name"><?php echo $provider_name;   //서비스이름 ?> (
+                                            <?php echo $account['displayname']; ?> )</span>
+                                        <span class="account_hidden"
+                                            style="display:none"><?php echo $account['mb_id']; ?></span>
+                                    </div>
+                                    <div class="btn_info"><a
+                                            href="<?php echo G5_SOCIAL_LOGIN_URL . '/unlink.php?mp_no=' . $account['mp_no'] ?>"
+                                            class="social_unlink"
+                                            data-provider="<?php echo $account['mp_no']; ?>">연동해제</a> <span
+                                            class="sound_only"><?php echo substr($account['mp_register_day'], 2, 14); ?></span>
+                                    </div>
+                                </div>
+                                <?php } //end foreach ?>
+                            </li>
+                        </ul>
+                        <script>
+                        jQuery(function($) {
+                            $(".account_provider").on("click", ".social_unlink", function(e) {
+                                e.preventDefault();
 
-                                            if (!confirm('정말 이 계정 연결을 삭제하시겠습니까?')) {
-                                                return false;
-                                            }
+                                if (!confirm('정말 이 계정 연결을 삭제하시겠습니까?')) {
+                                    return false;
+                                }
 
-                                            var ajax_url = "<?php echo G5_SOCIAL_LOGIN_URL . '/unlink.php' ?>";
-                                            var mb_id = '',
-                                                mp_no = $(this).attr("data-provider"),
-                                                $mp_el = $(this).parents(".account_provider");
+                                var ajax_url = "<?php echo G5_SOCIAL_LOGIN_URL . '/unlink.php' ?>";
+                                var mb_id = '',
+                                    mp_no = $(this).attr("data-provider"),
+                                    $mp_el = $(this).parents(".account_provider");
 
-                                            mb_id = $mp_el.find(".account_hidden").text();
+                                mb_id = $mp_el.find(".account_hidden").text();
 
-                                            if (!mp_no) {
-                                                alert('잘못된 요청! mp_no 값이 없습니다.');
-                                                return;
-                                            }
+                                if (!mp_no) {
+                                    alert('잘못된 요청! mp_no 값이 없습니다.');
+                                    return;
+                                }
 
-                                            $.ajax({
-                                                url: ajax_url,
-                                                type: 'POST',
-                                                data: {
-                                                    'mp_no': mp_no,
-                                                    'mb_id': mb_id
-                                                },
-                                                dataType: 'json',
-                                                async: false,
-                                                success: function(data, textStatus) {
-                                                    if (data.error) {
-                                                        alert(data.error);
-                                                        return false;
-                                                    } else {
-                                                        alert("연결이 해제 되었습니다.");
-                                                        $mp_el.fadeOut("normal", function() {
-                                                            $(this).remove();
-                                                        });
-                                                    }
-                                                }
+                                $.ajax({
+                                    url: ajax_url,
+                                    type: 'POST',
+                                    data: {
+                                        'mp_no': mp_no,
+                                        'mb_id': mb_id
+                                    },
+                                    dataType: 'json',
+                                    async: false,
+                                    success: function(data, textStatus) {
+                                        if (data.error) {
+                                            alert(data.error);
+                                            return false;
+                                        } else {
+                                            alert("연결이 해제 되었습니다.");
+                                            $mp_el.fadeOut("normal", function() {
+                                                $(this).remove();
                                             });
+                                        }
+                                    }
+                                });
 
-                                            return;
-                                        });
-                                    });
-                                </script>
+                                return;
+                            });
+                        });
+                        </script>
 
-                            </td>
-                        </tr>
+                    </td>
+                </tr>
 
                 <?php
                     }   //end if
                 }   //end if
 
                 run_event('admin_member_form_add', $mb, $w, 'table');
-                ?>
+                ?> -->
 
-                <?php for ($i = 1; $i <= 10; $i++) { ?>
-                    <tr>
-                        <th scope="row"><label for="mb_<?php echo $i ?>">여분 필드 <?php echo $i ?></label></th>
-                        <td colspan="3"><input type="text" name="mb_<?php echo $i ?>" value="<?php echo $mb['mb_' . $i] ?>" id="mb_<?php echo $i ?>" class="frm_input" size="30" maxlength="255"></td>
-                    </tr>
-                <?php } ?>
+                <!-- <?php for ($i = 1; $i <= 10; $i++) { ?>
+                <tr>
+                    <th scope="row"><label for="mb_<?php echo $i ?>">여분 필드 <?php echo $i ?></label></th>
+                    <td colspan="3"><input type="text" name="mb_<?php echo $i ?>" value="<?php echo $mb['mb_' . $i] ?>"
+                            id="mb_<?php echo $i ?>" class="frm_input" size="30" maxlength="255"></td>
+                </tr>
+                <?php } ?> -->
 
             </tbody>
         </table>
@@ -583,46 +658,53 @@ add_javascript(G5_POSTCODE_JS, 0);    //다음 주소 js
 </form>
 
 <script>
-    function fmember_submit(f) {
-        if (!f.mb_icon.value.match(/\.(gif|jpe?g|png)$/i) && f.mb_icon.value) {
-            alert('아이콘은 이미지 파일만 가능합니다.');
-            return false;
-        }
-
-        if (!f.mb_img.value.match(/\.(gif|jpe?g|png)$/i) && f.mb_img.value) {
-            alert('회원이미지는 이미지 파일만 가능합니다.');
-            return false;
-        }
-
-        if( jQuery("#mb_password").val() ){
-            <?php echo $captcha_js; // 캡챠 사용시 자바스크립트에서 입력된 캡챠를 검사함 ?>
-        }
-
-        return true;
+function fmember_submit(f) {
+    if (!f.mb_icon.value.match(/\.(gif|jpe?g|png)$/i) && f.mb_icon.value) {
+        alert('아이콘은 이미지 파일만 가능합니다.');
+        return false;
     }
 
-    jQuery(function($){
-        $("#captcha_key").prop('required', false).removeAttr("required").removeClass("required");
+    if (!f.mb_img.value.match(/\.(gif|jpe?g|png)$/i) && f.mb_img.value) {
+        alert('회원이미지는 이미지 파일만 가능합니다.');
+        return false;
+    }
 
-        $("#mb_password").on("keyup", function(e) {
-            var $warp = $("#mb_password_captcha_wrap"),
-                tooptipid = "mp_captcha_tooltip",
-                $span_text = $("<span>", {id:tooptipid, style:"font-size:0.95em;letter-spacing:-0.1em"}).html("비밀번호를 수정할 경우 캡챠를 입력해야 합니다."),
-                $parent = $(this).parent(),
-                is_invisible_recaptcha = $("#captcha").hasClass("invisible_recaptcha");
+    if (jQuery("#mb_password").val()) {
+        <?php echo $captcha_js; // 캡챠 사용시 자바스크립트에서 입력된 캡챠를 검사함 ?>
+    }
 
-            if($(this).val()){
-                $warp.show();
-                if(! is_invisible_recaptcha) {
-                    $warp.css("margin-top","1em");
-                    if(! $("#"+tooptipid).length){ $parent.append($span_text) }
+    return true;
+}
+
+jQuery(function($) {
+    $("#captcha_key").prop('required', false).removeAttr("required").removeClass("required");
+
+    $("#mb_password").on("keyup", function(e) {
+        var $warp = $("#mb_password_captcha_wrap"),
+            tooptipid = "mp_captcha_tooltip",
+            $span_text = $("<span>", {
+                id: tooptipid,
+                style: "font-size:0.95em;letter-spacing:-0.1em"
+            }).html("비밀번호를 수정할 경우 캡챠를 입력해야 합니다."),
+            $parent = $(this).parent(),
+            is_invisible_recaptcha = $("#captcha").hasClass("invisible_recaptcha");
+
+        if ($(this).val()) {
+            $warp.show();
+            if (!is_invisible_recaptcha) {
+                $warp.css("margin-top", "1em");
+                if (!$("#" + tooptipid).length) {
+                    $parent.append($span_text)
                 }
-            } else {
-                $warp.hide();
-                if($("#"+tooptipid).length && ! is_invisible_recaptcha){ $parent.find("#"+tooptipid).remove(); }
             }
-        });
+        } else {
+            $warp.hide();
+            if ($("#" + tooptipid).length && !is_invisible_recaptcha) {
+                $parent.find("#" + tooptipid).remove();
+            }
+        }
     });
+});
 </script>
 <?php
 run_event('admin_member_form_after', $mb, $w);
