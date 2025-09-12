@@ -13,8 +13,8 @@ require_once './_common.php';
 // =========================
 // 1) 라이브러리 로드 (PHPExcel)
 // =========================
-require_once G5_LIB_PATH . '/PHPExcel/PHPExcel.php';
-require_once G5_LIB_PATH . '/PHPExcel/PHPExcel/IOFactory.php';
+require_once G5_LIB_PATH . '/PHPExcel.php';
+require_once G5_LIB_PATH . '/PHPExcel/IOFactory.php';
 
 // =========================
 // 2) 유틸
