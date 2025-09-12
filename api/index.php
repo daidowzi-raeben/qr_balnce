@@ -1,6 +1,7 @@
 <?php
+error_log('[INDEX] step1: enter');
 include_once('./_common.php');
-
+error_log('[INDEX] step2: after common.php');
 define('_INDEX_', true);
 if (!defined('_GNUBOARD_')) exit; // 개별 페이지 접근 불가
 

@@ -1,7 +1,7 @@
 <?php
 require_once "./_common.php";
 /**
- * member_student_form_update.php
+ * member_student_form_update.php (PHP 7.0 호환 / Spout 2.7)
  * - XLSX 업로드 전용
  * - 1행: 헤더(필드명), 2행: 무시, 3행부터 등록
  * - sql_query()만 사용 (DB 연결/트랜잭션 없음)
@@ -12,18 +12,19 @@ require_once "./_common.php";
  */
 
 /* =========================
- * 1) 라이브러리 로드 (PhpSpreadsheet)
+ * 1) 라이브러리 로드 (Spout 2.7)
  * ========================= */
 $autoload = __DIR__ . '/vendor/autoload.php';
 if (!is_file($autoload)) {
-    echo "라이브러리(PhpSpreadsheet)가 설치되어 있지 않습니다.<br>".
+    echo "라이브러리(Spout)가 설치되어 있지 않습니다.<br>".
          "이 파일과 같은 경로에서 아래 명령을 실행하세요.<br>".
-         "<pre>composer require phpoffice/phpspreadsheet</pre>";
+         "<pre>composer require box/spout:^2.7</pre>";
     exit;
 }
 require_once $autoload;
 
-use PhpOffice\PhpSpreadsheet\Reader\Xlsx;
+use Box\Spout\Reader\ReaderFactory;
+use Box\Spout\Common\Type;
 
 /* =========================
  * 2) 유틸
@@ -38,25 +39,31 @@ const ALLOWED_COLUMNS = [
   'mb_company','mb_type','mb_name','mb_1','mb_2','mb_3'
 ];
 
-/** 날짜/시간 보정 */
+/** 엑셀 날짜/시간 보정 */
 function normalize_datetime($v){
     if ($v === '' || $v === null) return null;
-    if (is_numeric($v)) { // 엑셀 시리얼
+    // 숫자 = 엑셀 시리얼로 판단
+    if (is_numeric($v)) {
+        // 엑셀 기준 시작(윤초/윤년 보정 포함) : 1899-12-30
         $base = new DateTime('1899-12-30 00:00:00', new DateTimeZone('UTC'));
-        $base->modify('+' . intval($v) . ' days');
+        $days = (int)floor($v);
+        $secs = (int)round(($v - $days) * 86400);
+        $base->modify('+' . $days . ' days');
+        $base->modify('+' . $secs . ' seconds');
         return $base->format('Y-m-d H:i:s');
     }
-    $ts = strtotime($v);
+    $ts = strtotime((string)$v);
     return $ts !== false ? date('Y-m-d H:i:s', $ts) : null;
 }
 function normalize_date($v){
     if ($v === '' || $v === null) return null;
     if (is_numeric($v)) {
         $base = new DateTime('1899-12-30 00:00:00', new DateTimeZone('UTC'));
-        $base->modify('+' . intval($v) . ' days');
+        $days = (int)round($v);
+        $base->modify('+' . $days . ' days');
         return $base->format('Y-m-d');
     }
-    $ts = strtotime($v);
+    $ts = strtotime((string)$v);
     return $ts !== false ? date('Y-m-d', $ts) : null;
 }
 function normalize_year($v){
@@ -72,6 +79,7 @@ function build_sql_common(array $row){
     foreach (ALLOWED_COLUMNS as $c) {
         if (!array_key_exists($c, $row)) continue;
         $v = $row[$c];
+
         // 타입별 보정
         if ($c === 'c_datetime') $v = normalize_datetime($v);
         if ($c === 'c_date')     $v = normalize_date($v);
@@ -98,92 +106,103 @@ if ($ext !== 'xlsx') {
 $tmpPath = $_FILES['file']['tmp_name'];
 
 /* =========================
- * 4) 엑셀 읽기
+ * 4) 엑셀 읽기 (Spout)
  * ========================= */
 try {
-    $reader = new Xlsx();
-    $reader->setReadDataOnly(true);
-    $xlsx = $reader->load($tmpPath);
-    $sheet = $xlsx->getActiveSheet();
-    // A,B,C... 키 배열
-    $data = $sheet->toArray(null, true, true, true);
-} catch (Throwable $e) {
-    echo "엑셀 읽기 오류: " . htmlspecialchars($e->getMessage());
+    $reader = ReaderFactory::create(Type::XLSX);
+    // 대용량 안정화 옵션
+    $reader->setShouldFormatDates(false); // 원시값 그대로(날짜는 수치로 들어옴)
+    $reader->open($tmpPath);
+} catch (Exception $e) {
+    echo "엑셀 열기 오류: " . htmlspecialchars($e->getMessage());
     exit;
 }
-if (empty($data)) { echo "빈 시트입니다."; exit; }
 
-/* =========================
- * 5) 헤더 추출(1행) & 데이터는 3행부터
- * ========================= */
-$headerRow = $data[1] ?? null;           // 1행
-if (!$headerRow) { echo "헤더(1행)가 없습니다."; exit; }
+$headerIndex = [];    // '필드명' => 열 인덱스(0-based)
+$hasIdx = false;
+$rowNumber = 0;
+$ok = 0; $fail = 0; $errors = [];
+$last_mb_id = '';
 
-$headers = array_values($headerRow);     // ['mb_id','mb_nick',...]
-$headerIndex = [];                       // 필드명 -> 열인덱스(0-based)
-$keys = array_keys($headerRow);          // ['A','B','C'...]
-foreach ($keys as $i => $_) {
-    $name = trim((string)($headers[$i] ?? ''));
-    if ($name !== '') $headerIndex[$name] = $i; // 0-based
-}
+try {
+    foreach ($reader->getSheetIterator() as $sheet) {
+        foreach ($sheet->getRowIterator() as $rowObj) {
+            $rowNumber++;
+            $cells = $rowObj->toArray(); // 단순 배열
 
-// mb_id 컬럼 존재 확인
-if (!array_key_exists('mb_id', $headerIndex)) {
-    echo "헤더에 'mb_id' 컬럼명이 없습니다. (1행에 정확히 'mb_id'를 넣어주세요)";
+            // 1행: 헤더 처리
+            if ($rowNumber === 1) {
+                foreach ($cells as $i => $h) {
+                    $name = trim((string)$h);
+                    if ($name !== '') $headerIndex[$name] = $i;
+                }
+                // 필수 헤더 검사
+                if (!array_key_exists('mb_id', $headerIndex)) {
+                    echo "헤더에 'mb_id' 컬럼명이 없습니다. (1행에 정확히 'mb_id'를 넣어주세요)";
+                    $reader->close();
+                    exit;
+                }
+                $hasIdx = array_key_exists('idx', $headerIndex);
+                continue;
+            }
+
+            // 2행: 무시
+            if ($rowNumber === 2) {
+                continue;
+            }
+
+            // 3행부터: 데이터 처리
+            // 완전 빈 줄 스킵
+            $nonEmpty = array_filter($cells, function($v){ return trim((string)$v) !== ''; });
+            if (!$nonEmpty) continue;
+
+            // 행 -> 연관배열 구성
+            $row = [];
+            if ($hasIdx) {
+                $idxPos = $headerIndex['idx'];
+                $row['idx'] = isset($cells[$idxPos]) ? trim((string)$cells[$idxPos]) : '';
+            }
+            foreach (ALLOWED_COLUMNS as $col) {
+                if (!array_key_exists($col, $headerIndex)) continue; // 헤더 없는 컬럼은 무시
+                $pos = $headerIndex[$col];
+                $row[$col] = isset($cells[$pos]) ? $cells[$pos] : null;
+            }
+
+            // 필수: mb_id
+            $mb_id = isset($row['mb_id']) ? trim((string)$row['mb_id']) : '';
+            if ($mb_id === '') {
+                $fail++; $errors[] = "행{$rowNumber} INSERT 실패: mb_id가 비어있습니다.";
+                continue;
+            }
+            $last_mb_id = $mb_id;
+
+            $sql_common = build_sql_common($row);
+
+            if ($hasIdx && !empty($row['idx'])) {
+                $idxVal = sql_escape_string($row['idx']);
+                $sql = "UPDATE qr_member_student
+                           SET {$sql_common}
+                         WHERE idx = '{$idxVal}'";
+            } else {
+                $sql = "INSERT INTO qr_member_student
+                           SET {$sql_common}";
+            }
+
+            $res = sql_query($sql, false);
+            if ($res) $ok++; else { $fail++; $errors[] = "행{$rowNumber} 쿼리 실패"; }
+        }
+        // 첫 시트만 처리
+        break;
+    }
+    $reader->close();
+} catch (Exception $e) {
+    if (method_exists($reader, 'close')) { $reader->close(); }
+    echo "처리 중 오류: " . htmlspecialchars($e->getMessage());
     exit;
 }
-// idx가 있으면 UPDATE 지원
-$hasIdx = array_key_exists('idx', $headerIndex);
-
-$ok=0; $fail=0; $errors=[];
 
 /* =========================
- * 6) 3행부터 처리
- * ========================= */
-for ($r = 3; $r <= count($data); $r++) {
-    if (!isset($data[$r])) continue;
-    $rowArr = array_values($data[$r]);   // A,B,C... 값을 0-based로
-    // 완전 빈줄 스킵
-    $nonEmpty = array_filter($rowArr, fn($v)=>trim((string)$v) !== '');
-    if (!$nonEmpty) continue;
-
-    // 행 → 연관배열(필드명 기준)
-    $row = [];
-    if ($hasIdx) {
-        $idxPos = $headerIndex['idx'];
-        $row['idx'] = trim((string)($rowArr[$idxPos] ?? ''));
-    }
-    foreach (ALLOWED_COLUMNS as $col) {
-        if (!array_key_exists($col, $headerIndex)) continue; // 헤더에 없는 컬럼은 패스
-        $pos = $headerIndex[$col];
-        $row[$col] = $rowArr[$pos] ?? null;
-    }
-
-    // 필수: mb_id
-    $mb_id = isset($row['mb_id']) ? trim((string)$row['mb_id']) : '';
-    if ($mb_id === '') {
-        $fail++; $errors[] = "행{$r} INSERT 실패: mb_id가 비어있습니다.";
-        continue;
-    }
-
-    $sql_common = build_sql_common($row);
-
-    if ($hasIdx && !empty($row['idx'])) {
-        $idxVal = sql_escape_string($row['idx']);
-        $sql = "UPDATE qr_member_student
-                   SET {$sql_common}
-                 WHERE idx = '{$idxVal}'";
-    } else {
-        $sql = "INSERT INTO qr_member_student
-                   SET {$sql_common}";
-    }
-
-    $res = sql_query($sql, false); // 그누보드 스타일
-    if ($res) $ok++; else { $fail++; $errors[] = "행{$r} 쿼리 실패"; }
-}
-
-/* =========================
- * 7) 결과 출력
+ * 5) 결과 출력 & 리다이렉트
  * ========================= */
 echo "<h3>처리 결과</h3>";
 echo "<div>성공: {$ok}건</div>";
@@ -191,6 +210,9 @@ echo "<div>실패: {$fail}건</div>";
 if ($errors) {
     echo "<hr><pre>".htmlspecialchars(implode("\n", $errors), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')."</pre>";
 }
-echo '<p><a href="'.htmlspecialchars($_SERVER['HTTP_REFERER'] ?? './').'">돌아가기</a></p>';
 
-goto_url('./member_student_list.php?' . $qstr . '&amp;w=u&amp;mb_id=' . $mb_id, false);
+// 기존 코드 호환: $qstr / 마지막 mb_id 기준 리다이렉트
+$qstr = isset($qstr) ? $qstr : '';
+if (function_exists('goto_url')) {
+    goto_url('./member_student_list.php?' . $qstr . '&w=u&mb_id=' . urlencode($last_mb_id), false);
+}
