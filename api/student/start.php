@@ -33,17 +33,28 @@ const onclickSubmit2 = () => {
     document.getElementById('form').submit()
 }
 </script>
+
+<?php if(!$row) { ?>
+<div style="text-align:center;background:#EAF2FF;">
+    <img src="./image/08.png" height="100%">
+</div>
+<?php
+exit;
+}?>
+
 <?php
 if(!isset($_GET['num'])) {?>
 <div class="">
     <div class="title">
         밸런스 선택
     </div>
-    <div class="content">
-        <div class="before_box" onclick="onclickStart()">
-            <img src="./image/start.png" width="80%">
-            <div class="before_title">
-                밸런스 강의 <br>시작 전
+    <div class="content" style="background:#EAF2FF; height:100%;">
+        <div class="before_box" onclick="onclickStart()" style="background:#EAF2FF;">
+            <img src="./image/wait.png" width="80%">
+            <div style="margin-top:50px;">
+                <div style="background:#2A47FF;text-align:center; width:80%; padding:15px; font-size:20px;
+                color:#fff; margin:0 auto; border-radius:100px;
+                ">들어가기</div>
             </div>
         </div>
     </div>

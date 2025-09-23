@@ -4,6 +4,12 @@ include_once('./head.php');
 ?>
 
 
+<?php if(!$row) { ?>
+<img src="./image/08.png" width="100%" height="100%">
+<?php
+exit;
+}?>
+
 <?php if($start > 4) { ?>
 <?php if(!$row_img['bf_file']) {?>
 <script>

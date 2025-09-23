@@ -133,6 +133,7 @@ $list_bbs = sql_query("select * from qr_board");
                     <th scope="col" id="mb_list_name">사번</a></th>
                     <th scope="col" id="mb_list_name">닉네임</a></th>
                     <th scope="col" id="mb_list_nick">질의</a></th>
+                    <th scope="col" id="mb_list_nick">선택</a></th>
                     <th scope="col" id="mb_list_deny"> 답변</a>
                     </th>
                     <th scope="col" id="mb_list_tel">응답일</th>
@@ -225,6 +226,9 @@ $list_bbs = sql_query("select * from qr_board");
                     </td>
                     <td headers="mb_list_nick" class="td_name sv_use" style="word-break: break-all;">
                         <div><?php echo $qq['wr_subject']?></div>
+                    </td>
+                    <td headers="mb_list_nick" class="td_name sv_use" style="word-break: break-all;">
+                        <div><?php echo $row['chk'] ?></div>
                     </td>
                     <td headers="mb_list_nick" class="td_name sv_use" style="word-break: break-all;">
                         <div><?php echo $row['content'] ?></div>

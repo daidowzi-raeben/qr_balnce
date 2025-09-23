@@ -21,9 +21,10 @@ include_once(G5_PATH.'/head.php');
 <div class="latest_wr">
     <!-- 최신글 시작 { -->
     <?php
-    
+    $q = " and bo_admin != '{$member['mb_id']}' ";
     //  최신글
-    $sql = " select * from qr_board ";
+    $sql = " select * from qr_board where (1) " . $q;
+    echo $sql;
     $result = sql_query($sql);
     for ($i=0; $row=sql_fetch_array($result); $i++) {
     ?>
