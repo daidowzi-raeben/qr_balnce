@@ -204,6 +204,12 @@ add_stylesheet('<link rel="stylesheet" href="'.$board_skin_url.'/style.css">', 0
                 value="<?php if($i > '1') { echo '해설 이미지 업로드' ;} else { echo '문답내용';} ?>">
             <?php } ?>
 
+            <?php if ($is_file_content && $i == '1') {  ?>
+            <div style="margin-top:30px;">
+                해설 이미지 업로드
+            </div>
+            <?php }?>
+
             <?php if($w == 'u' && $file[$i]['file']) { ?>
             <span class=" file_del">
                 <input type="checkbox" id="bf_file_del<?php echo $i ?>" name="bf_file_del[<?php echo $i;  ?>]"
