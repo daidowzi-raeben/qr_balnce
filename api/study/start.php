@@ -169,15 +169,15 @@ window.location.href =
 <?php if($start == 3) { ?>
 
 
-
-
 <div class="content">
     <div class="table-wrapper">
         <table class="custom-table" id="myTable">
             <thead>
                 <tr>
                     <th style="min-width:100px;">닉네임</th>
-                    <th>나의 생각은?</th>
+                    <th>
+                        <?php echo $row_a['wr_7']; ?>
+                    </th>
                 </tr>
             </thead>
             <tbody>
@@ -228,7 +228,7 @@ window.location.href =
                         <thead>
                             <tr>
                                 <th style="min-width:100px;">닉네임</th>
-                                <th>나의 생각은?</th>
+                                <th> <?php echo $row_a['wr_7']; ?></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -267,7 +267,7 @@ window.location.href =
             <thead>
                 <tr>
                     <th style="min-width:100px;">닉네임</th>
-                    <th>나의 생각은?</th>
+                    <th> <?php echo $row_a['wr_7']; ?></th>
                 </tr>
             </thead>
             <tbody>
@@ -318,7 +318,7 @@ window.location.href =
                         <thead>
                             <tr>
                                 <th style="min-width:100px;">닉네임</th>
-                                <th>나의 생각은?</th>
+                                <th> <?php echo $row_a['wr_7']; ?></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -392,11 +392,24 @@ window.location.href =
 <div class="" style="display:none;">
 
 </div>
-
+<?php
+$sql_start = "
+select * from qr_write_{$bo_table} where wr_4 = 'F' order by wr_id desc limit 1
+";
+$result_start = $sql_start;
+$row_start = sql_fetch($result_start);
+if($row_start['wr_2'] == 0) {
+    ?>
+<script>
+window.location.href =
+    "/study/start.php?bo_table=<?php echo $bo_table ?>&num=<?php echo $num ?>&start=<?php echo $start + 1 ?>"; // 다음 페이지 URL
+</script>
+<?php }
+?>
 
 <script>
 (() => {
-    const DURATION_MS = <?php echo $row['wr_2'] ? $row['wr_2'] * 1000 : 10000; ?>; // 1분
+    const DURATION_MS = <?php echo $row_start['wr_2'] ? $row_start['wr_2'] * 1000 : 10000; ?>; // 1분
     const mmEl = document.getElementById('mm');
     const ssEl = document.getElementById('ss');
     const msEl = document.getElementById('ms');
@@ -501,7 +514,7 @@ window.location.href =
 <?php if($start == 0) { ?>
 <div class="content">
     <div class="step">
-        QUESTION <?php echo $num + 1; ?>
+        <?php echo $row['wr_7'] ?> <?php echo $num + 1; ?>
     </div>
     <div class="con-title">
         <?php echo $row['wr_subject']?>

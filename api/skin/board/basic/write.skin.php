@@ -3,8 +3,13 @@ if (!defined('_GNUBOARD_')) exit; // 개별 페이지 접근 불가
 
 // add_stylesheet('css 구문', 출력순서); 숫자가 작을 수록 먼저 출력됨
 add_stylesheet('<link rel="stylesheet" href="'.$board_skin_url.'/style.css">', 0);
+if(!$type) $type = $wr_4;
 ?>
-
+<style>
+#bo_w {
+    font-size: 16px;
+}
+</style>
 <section id="bo_w">
     <h2 class="sound_only"><?php echo $g5['title'] ?></h2>
 
@@ -99,16 +104,36 @@ add_stylesheet('<link rel="stylesheet" href="'.$board_skin_url.'/style.css">', 0
 
 
         <script>
+        setTimeout(() => {
+            document.getElementById('wr_content').value = '1'
+        }, 1000);
         const onChange = (v) => {
             console.log(v.value)
+            document.getElementById('isStudy').style = "display:init"
+            document.getElementById('wr_subject').disabled = false
+            if (v.value === 'E') {
+                document.getElementById('wr_subject').disabled = true
+                document.getElementById('wr_subject').value = '시작화면'
+                document.getElementById('wr_subject').disabled = true
+                document.getElementById('isStudy').style = "display:none"
+            }
+            if (v.value === 'F') {
+                document.getElementById('wr_subject').disabled = true
+                document.getElementById('wr_subject').value = 'QR등록'
+                document.getElementById('isStudy').style = "display:none"
+            }
         }
         </script>
-        <div class="bo_w_select write_div" style="max-width:200px;">
+        <?php if($type == 'A' ) { ?>
+        <div class="bo_w_select write_div" style="max-width:200px; display:flex;">
+            <div style="min-width:70px; margin-top:10px;">화면 종류</div>
             <label for="wr_1">
                 <span class="sound_only">
                     링크 #</span>
             </label>
-            <select name="wr_1" onchange="onChange(this)">
+            <select name="wr_1" onchange="onChange(this)" value="<?php echo $type?>">
+                <!-- <option value="E" <?php if($wr_3 == 'E') echo 'selected'; ?>>시작화면</option> -->
+                <!-- <option value="F" <?php if($wr_3 == 'F') echo 'selected'; ?>>QR등록</option> -->
                 <option value="A" <?php if($wr_1 == 'A') echo 'selected'; ?>>밸런스게임</option>
                 <option value="B" <?php if($wr_1 == 'B') echo 'selected'; ?>>O/X 게임</option>
                 <option value="C" <?php if($wr_1 == 'C') echo 'selected'; ?>>A/B 게임</option>
@@ -117,27 +142,35 @@ add_stylesheet('<link rel="stylesheet" href="'.$board_skin_url.'/style.css">', 0
             <!-- <input type="text" name="wr_1" value="<?php if($w=="u"){ echo $write['wr_1']; } ?>" id="wr_1"
                 class="frm_input full_input" size="50"> -->
         </div>
-
-
-        <div class="bo_w_select write_div" style="max-width:200px;">
-            <select name="wr_2" onchange="onChange(this)">
-                <option value="15" <?php if($wr_2 == '15') echo 'selected'; ?>>대기시간 15초</option>
-                <option value="30" <?php if($wr_2 == '30') echo 'selected'; ?>>대기시간 30초</option>
-                <option value="50" <?php if($wr_2 == '50') echo 'selected'; ?>>대기시간 50초</option>
-                <option value="60" <?php if($wr_2 == '60') echo 'selected'; ?>>대기시간 60초</option>
-                <option value="120" <?php if($wr_2 == '120') echo 'selected'; ?>>대기시간 120초</option>
-
-            </select>
+        <?php }?>
+        <input type="hidden" name="wr_4" value="<?php echo $type ?>" id="wr_2" required class="frm_input full_input "
+            size="3" maxlength="255" placeholder="" style="width:50px;">
+        <?php if($type == 'F') {?>
+        <div class="bo_w_select write_div" style="max-width:200px; display:flex;">
+            <div style="min-width:70px; margin-top:10px;">제한시간</div>
+            <input type="text" name="wr_2" value="<?php echo $wr_2 ?>" id="wr_2" required class="frm_input full_input "
+                size="3" maxlength="255" placeholder="" style="width:50px;">
+            <div style="margin-top:10px; margin-left:5px;">초</div>
         </div>
+        <?php }?>
 
-        <div class="bo_w_tit write_div">
-            <label for="wr_subject" class="sound_only">제목<strong>필수</strong></label>
 
+        <div class="bo_w_select write_div" style=" display:flex;">
+            <?php if($type == 'F') { ?>
+            <input type="hidden" name="wr_subject" value="시작화면 등록" id="wr_subject" required
+                class="frm_input full_input required" size="50" maxlength="255" placeholder="질문">
+            <?php }  else if ($type == 'E') {?>
+            <input type="hidden" name="wr_subject" value="QR 등록" id="wr_subject" required
+                class="frm_input full_input required" size="50" maxlength="255" placeholder="질문">
+            <?php }  else if ($type == 'B') {?>
+            <input type="hidden" name="wr_subject" value="해설등록" id="wr_subject" required
+                class="frm_input full_input required" size="50" maxlength="255" placeholder="질문">
+            <?php } else {?>
             <div id="autosave_wrapper" class="write_div">
                 <input type="text" name="wr_subject" value="<?php echo $subject ?>" id="wr_subject" required
                     class="frm_input full_input required" size="50" maxlength="255" placeholder="질문">
                 <?php if ($is_member) { // 임시 저장된 글 기능 ?>
-                <script src="<?php echo G5_JS_URL; ?>/autosave.js"></script>
+                <!-- <script src="<?php echo G5_JS_URL; ?>/autosave.js"></script>
                 <?php if($editor_content_js) echo $editor_content_js; ?>
                 <button type="button" id="btn_autosave" class="btn_frmline">임시 저장된 글 (<span
                         id="autosave_count"><?php echo $autosave_count; ?></span>)</button>
@@ -145,13 +178,57 @@ add_stylesheet('<link rel="stylesheet" href="'.$board_skin_url.'/style.css">', 0
                     <strong>임시 저장된 글 목록</strong>
                     <ul></ul>
                     <div><button type="button" class="autosave_close">닫기</button></div>
-                </div>
+                </div> -->
                 <?php } ?>
             </div>
+            <?php } ?>
+
+
 
         </div>
 
-        <div class="write_div">
+        <?php if($type == 'E') { ?>
+        <img width="330"
+            src="https://api.qrserver.com/v1/create-qr-code/?size=330x330&data=<?php echo G5_URL.'/student/?bo_table='.$bo_table?>">
+        <?php }?>
+
+        <?php if($type == 'B') { ?>
+        <div class="bo_w_select write_div" style=" display:flex;">
+            <div style="min-width:70px; margin-top:21px;">"나의 생각은?" 문구변경
+            </div>
+            <label for="wr_subject" class="sound_only">제목<strong>필수</strong></label>
+
+        </div>
+        <div>
+            <input type="text" name="wr_7" value="<?php echo $wr_7 ?>" id="wr_7" required class="frm_input full_input "
+                maxlength="255" placeholder="">
+        </div>
+        <div class="bo_w_select write_div" style=" display:flex;">
+            <div style="min-width:70px; margin-top:21px;">"이럴땐 이렇게!" 문구 변경</div>
+            <label for="wr_subject" class="sound_only">제목<strong>필수</strong></label>
+
+        </div>
+        <div>
+            <input type="text" name="wr_8" value="<?php echo $wr_8 ?>" id="wr_8" required class="frm_input full_input "
+                maxlength="255" placeholder="">
+        </div>
+        <?php }?>
+
+        <?php if($type == 'A') { ?>
+        <div class="bo_w_select write_div" style=" display:flex;">
+            <div style="min-width:70px; margin-top:21px;">"QUESTION" 문구변경
+            </div>
+            <label for="wr_subject" class="sound_only">제목<strong>필수</strong></label>
+
+        </div>
+        <div>
+            <input type="text" name="wr_7" value="<?php echo $wr_7 ?>" id="wr_7" required class="frm_input full_input "
+                maxlength="255" placeholder="">
+        </div>
+        <?php }?>
+
+
+        <div class="write_div" style="display:none;">
             <label for="wr_content" class="sound_only">내용<strong>필수</strong></label>
             <div style="margin-top:5px; color:#999;">해설 내용을 입력해주세요. 해설이 없을 시 메모 등으로 필수 입력 되어야 합니다.</div>
             <div class="wr_content <?php echo $is_dhtml_editor ? $config['cf_editor'] : ''; ?>">
@@ -170,25 +247,21 @@ add_stylesheet('<link rel="stylesheet" href="'.$board_skin_url.'/style.css">', 0
 
         </div>
 
-        <!-- <div class="bo_w_select write_div">
-            <label for="wr_1">
-                <span class="sound_only">
-                    링크 #</span>
-            </label>
-            <input type="text" name="wr_1" value="<?php if($w=="u"){ echo $write['wr_1']; } ?>" id="wr_1"
-                class="frm_input full_input" size="50">
-        </div> -->
+        <?php if($type == 'F') { ?>
+        <?php 
+            for ($i=0; $is_file && $i<4; $i++) { ?>
 
-        <!-- <?php for ($i=1; $is_link && $i<=G5_LINK_COUNT; $i++) { ?>
-        <div class="bo_w_link write_div">
-            <label for="wr_link<?php echo $i ?>"><i class="fa fa-link" aria-hidden="true"></i><span class="sound_only">
-                    링크 #<?php echo $i ?></span></label>
-            <input type="text" name="wr_link<?php echo $i ?>" value="<?php if($w=="u"){ echo $write['wr_link'.$i]; } ?>"
-                id="wr_link<?php echo $i ?>" class="frm_input full_input" size="50">
+        <div class="bo_w_select write_div" style=" display:flex;">
+            <?php if ($is_file_content && $i < '2') { ?>
+            <div style="min-width:70px; margin-top:21px;">인트로 디자인 이미지
+                <?php if($i == '0') { echo 'PC'; } else { echo '모바일';} ?></div>
+            <label for="wr_subject" class="sound_only">제목<strong>필수</strong></label>
+            <?php } else {?>
+            <div style="min-width:70px; margin-top:21px;">갈림길 디자인 이미지
+                <?php if($i == '0') { echo 'PC'; } else { echo '모바일';} ?></div>
+            <label for="wr_subject" class="sound_only">제목<strong>필수</strong></label>
+            <?php }?>
         </div>
-        <?php } ?> -->
-
-        <?php for ($i=0; $is_file && $i<$file_count; $i++) { ?>
         <div class="bo_w_flie write_div">
             <div class="file_wr write_div">
                 <label for="bf_file_<?php echo $i+1 ?>" class="lb_icon"><i class="fa fa-folder-open"
@@ -197,16 +270,16 @@ add_stylesheet('<link rel="stylesheet" href="'.$board_skin_url.'/style.css">', 0
                     title="파일첨부 <?php echo $i+1 ?> : 용량 <?php echo $upload_max_filesize ?> 이하만 업로드 가능"
                     class="frm_file ">
             </div>
-            <?php if ($is_file_content && $i < '2') { ?>
+            <!-- <?php if ($is_file_content && $i < '2') { ?>
             <input type="text" name="bf_content[]" value="<?php echo ($w == 'u') ? $file[$i]['bf_content'] : ''; ?>"
                 title="문답내용" class="full_input frm_input" size="50"
                 placeholder="<?php if($i > '1') { echo '해설 이미지 업로드'; echo $i-1;} else { echo '문답내용';} ?>"
                 value="<?php if($i > '1') { echo '해설 이미지 업로드' ;} else { echo '문답내용';} ?>">
-            <?php } ?>
+            <?php } ?> -->
 
             <?php if ($is_file_content && $i == '1') {  ?>
             <div style="margin-top:30px;">
-                해설 이미지 업로드
+                <!-- 해설 이미지 업로드 -->
             </div>
             <?php }?>
 
@@ -222,7 +295,156 @@ add_stylesheet('<link rel="stylesheet" href="'.$board_skin_url.'/style.css">', 0
 
         </div>
         <?php } ?>
+        <?php } else if($type == 'E') { ?>
+        <?php 
+            for ($i=0; $is_file && $i<2; $i++) { ?>
 
+        <div class="bo_w_select write_div" style=" display:flex;">
+            <div style="min-width:70px; margin-top:21px;">QR 디자인 이미지
+                <?php if($i == '0') { echo 'PC'; } else { echo '모바일';} ?></div>
+            <label for="wr_subject" class="sound_only">제목<strong>필수</strong></label>
+
+        </div>
+        <div class="bo_w_flie write_div">
+            <div class="file_wr write_div">
+                <label for="bf_file_<?php echo $i+1 ?>" class="lb_icon"><i class="fa fa-folder-open"
+                        aria-hidden="true"></i><span class="sound_only"> 파일 #<?php echo $i+1 ?></span></label>
+                <input type="file" name="bf_file[]" id="bf_file_<?php echo $i+1 ?>"
+                    title="파일첨부 <?php echo $i+1 ?> : 용량 <?php echo $upload_max_filesize ?> 이하만 업로드 가능"
+                    class="frm_file ">
+            </div>
+            <!-- <?php if ($is_file_content && $i < '2') { ?>
+            <input type="text" name="bf_content[]" value="<?php echo ($w == 'u') ? $file[$i]['bf_content'] : ''; ?>"
+                title="문답내용" class="full_input frm_input" size="50"
+                placeholder="<?php if($i > '1') { echo '해설 이미지 업로드'; echo $i-1;} else { echo '문답내용';} ?>"
+                value="<?php if($i > '1') { echo '해설 이미지 업로드' ;} else { echo '문답내용';} ?>">
+            <?php } ?> -->
+
+            <?php if ($is_file_content && $i == '1') {  ?>
+            <div style="margin-top:30px;">
+                <!-- 해설 이미지 업로드 -->
+            </div>
+            <?php }?>
+
+            <?php if($w == 'u' && $file[$i]['file']) { ?>
+            <span class=" file_del">
+                <input type="checkbox" id="bf_file_del<?php echo $i ?>" name="bf_file_del[<?php echo $i;  ?>]"
+                    value="1">
+                <label for="bf_file_del<?php echo $i ?>"><?php echo $file[$i]['source'].'('.$file[$i]['size'].')';  ?>
+                    파일
+                    삭제</label>
+            </span>
+            <?php } ?>
+
+        </div>
+        <?php } ?>
+        <?php } else if($type == 'A') { ?>
+
+        <?php 
+            for ($i=0; $is_file && $i<2; $i++) { ?>
+
+        <div class="bo_w_select write_div" style=" display:flex;">
+            <div style="min-width:70px; margin-top:21px;">
+                <?php if($i == '0') { echo '첫번째'; } else { echo '두번째';} ?> 질문</div>
+            <label for="wr_subject" class="sound_only">제목<strong>필수</strong></label>
+
+        </div>
+        <div class="bo_w_flie write_div">
+
+            <?php if ($is_file_content && $i < '2') { ?>
+            <input type="text" name="bf_content[]" value="<?php echo ($w == 'u') ? $file[$i]['bf_content'] : ''; ?>"
+                title="문답내용" class="full_input frm_input" size="50"
+                placeholder="<?php if($i > '1') { echo '해설 이미지 업로드'; echo $i-1;} else { echo '문답내용';} ?>"
+                value="<?php if($i > '1') { echo '해설 이미지 업로드' ;} else { echo '문답내용';} ?>">
+            <?php } ?>
+
+            <?php if ($is_file_content && $i == '1') {  ?>
+            <div style="margin-top:30px;">
+                <!-- 해설 이미지 업로드 -->
+            </div>
+            <?php }?>
+
+
+
+        </div>
+        <?php } ?>
+
+
+
+        <?php 
+            for ($i=0; $is_file && $i<2; $i++) { ?>
+
+        <div class="bo_w_select write_div" style=" display:flex;">
+            <div style="min-width:70px; margin-top:21px;">디자인 이미지
+                <?php if($i == '0') { echo '첫번째'; } else { echo '두번째';} ?></div>
+            <label for="wr_subject" class="sound_only">제목<strong>필수</strong></label>
+
+        </div>
+        <div class="bo_w_flie write_div">
+            <div class="file_wr write_div">
+                <label for="bf_file_<?php echo $i+1 ?>" class="lb_icon"><i class="fa fa-folder-open"
+                        aria-hidden="true"></i><span class="sound_only"> 파일 #<?php echo $i+1 ?></span></label>
+                <input type="file" name="bf_file[]" id="bf_file_<?php echo $i+1 ?>"
+                    title="파일첨부 <?php echo $i+1 ?> : 용량 <?php echo $upload_max_filesize ?> 이하만 업로드 가능"
+                    class="frm_file ">
+            </div>
+            <!-- <?php if ($is_file_content && $i < '2') { ?>
+            <input type="text" name="bf_content[]" value="<?php echo ($w == 'u') ? $file[$i]['bf_content'] : ''; ?>"
+                title="문답내용" class="full_input frm_input" size="50"
+                placeholder="<?php if($i > '1') { echo '해설 이미지 업로드'; echo $i-1;} else { echo '문답내용';} ?>"
+                value="<?php if($i > '1') { echo '해설 이미지 업로드' ;} else { echo '문답내용';} ?>">
+            <?php } ?> -->
+
+            <?php if ($is_file_content && $i == '1') {  ?>
+            <div style="margin-top:30px;">
+                <!-- 해설 이미지 업로드 -->
+            </div>
+            <?php }?>
+
+            <?php if($w == 'u' && $file[$i]['file']) { ?>
+            <span class=" file_del">
+                <input type="checkbox" id="bf_file_del<?php echo $i ?>" name="bf_file_del[<?php echo $i;  ?>]"
+                    value="1">
+                <label for="bf_file_del<?php echo $i ?>"><?php echo $file[$i]['source'].'('.$file[$i]['size'].')';  ?>
+                    파일
+                    삭제</label>
+            </span>
+            <?php } ?>
+
+        </div>
+        <?php } ?>
+        <?php } else { ?>
+        <?php for ($i=0; $is_file && $i<$file_count; $i++) { ?>
+        <?php if ($is_file_content && $i == '0') {  ?>
+        <div style="margin-top:30px;">
+            해설 이미지 업로드
+        </div>
+        <?php }?>
+        <div class="bo_w_flie write_div">
+            <div class="file_wr write_div">
+                <label for="bf_file_<?php echo $i+1 ?>" class="lb_icon"><i class="fa fa-folder-open"
+                        aria-hidden="true"></i><span class="sound_only"> 파일 #<?php echo $i+1 ?></span></label>
+                <input type="file" name="bf_file[]" id="bf_file_<?php echo $i+1 ?>"
+                    title="파일첨부 <?php echo $i+1 ?> : 용량 <?php echo $upload_max_filesize ?> 이하만 업로드 가능"
+                    class="frm_file ">
+            </div>
+
+
+
+
+            <?php if($w == 'u' && $file[$i]['file']) { ?>
+            <span class=" file_del">
+                <input type="checkbox" id="bf_file_del<?php echo $i ?>" name="bf_file_del[<?php echo $i;  ?>]"
+                    value="1">
+                <label for="bf_file_del<?php echo $i ?>"><?php echo $file[$i]['source'].'('.$file[$i]['size'].')';  ?>
+                    파일
+                    삭제</label>
+            </span>
+            <?php } ?>
+
+        </div>
+        <?php } ?>
+        <?php } ?>
 
         <?php if ($is_use_captcha) { //자동등록방지  ?>
         <div class="write_div">

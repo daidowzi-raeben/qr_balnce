@@ -33,7 +33,7 @@ if(isset($row['mb_nick']) && $row['mb_nick'] == $mb_nick) {
     $sql = " select * from qr_member_student where mb_id = '{$mb_id}' and mb_nick = '{$mb_nick}' limit 1  ";
 $result = $sql;
 $row = sql_fetch($result);
-     alert('로그인 되었습니다.', G5_URL.'/student/start.php?bo_table='.$bo_table.'&id='.$row['idx']);
+     alert('로그인 되었습니다.', G5_URL.'/student/start.php?num=0&bo_table='.$bo_table.'&id='.$row['idx']);
     }
 }
 

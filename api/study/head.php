@@ -731,7 +731,7 @@ $list = sql_query("select *
 from qr_member_student_qa as a where bo_table= '{$bo_table}' and num = '{$num}'");
 
 $sql = " select * 
-from qr_write_".$bo_table." limit $num, 1  ";
+from qr_write_".$bo_table." where wr_4 = 'A'  limit $num, 1  ";
 
 $result = $sql;
 $row = sql_fetch($result);
@@ -739,9 +739,20 @@ $row = sql_fetch($result);
 
 
 
+$sql_a = " select * 
+from qr_write_".$bo_table." where wr_4 = 'B'  limit $num, 1  ";
+
+$result_a = $sql_a;
+$row_a = sql_fetch($result_a);
+
+$sql_bb = " select * from qr_write_".$bo_table." where wr_4 = 'B' limit $num, 1  ";
+$result_bb = $sql_bb;
+$row_bb = sql_fetch($result_bb);
+
+
 $imgs = $start - 5;
 $sql_img = "select * from qr_board_file where 
-bo_table = '{$bo_table}' and wr_id = '{$row['wr_id']}' and bf_content = '' order by bf_no asc
+bo_table = '{$bo_table}' and wr_id = '{$row_bb['wr_id']}' and bf_content = '' order by bf_no asc
 limit $imgs, 1
 ";
 
@@ -750,10 +761,11 @@ $row_img = sql_fetch($result_img);
 
 
 $sql_img_cnt = "select count(*) as cnt from qr_board_file where 
-bo_table = '{$bo_table}' and wr_id = '{$row['wr_id']}' and bf_content = '' order by bf_no asc
+bo_table = '{$bo_table}' and wr_id = '{$row_bb['wr_id']}' and bf_content = '' order by bf_no asc
 ";
 $result_img_cnt = $sql_img_cnt;
 $row_img_cnt = sql_fetch($result_img_cnt);
+
 
 
 
@@ -853,8 +865,10 @@ document.addEventListener('keydown', function(e) {
     // 오른쪽 화살표 키
     else if (e.key === "PageDown") {
         if (total_img + 3 < start) {
+            console.log(total_img)
             window.location.href =
                 "/study/start.php?bo_table=<?php echo $bo_table ?>&num=<?php echo $num + 1 ?>&start=0"; // 다음 페이지 URL
+            return;
 
         } else {
 

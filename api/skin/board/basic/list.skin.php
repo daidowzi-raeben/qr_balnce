@@ -47,6 +47,31 @@ add_stylesheet('<link rel="stylesheet" href="'.$board_skin_url.'/style.css">', 0
             </div>
 
             <ul class="btn_bo_user">
+                <li style="width:100px;">
+                    <button type="button"
+                        style="padding:5px 10px; width:90%; background:black; color:#fff; border:none;"
+                        onclick="location.href=' <?php echo $write_href.'&type=F' ?>';">1.시작화면등록</button>
+                </li>
+                <li style="width:100px;">
+                    <button type="button"
+                        style="padding:5px 10px; width:90%; background:black; color:#fff; border:none;"
+                        onclick="location.href=' <?php echo $write_href.'&type=E' ?>';">2.QR
+                        등록</button>
+                </li>
+                <li style="width:100px;">
+                    <button type="button"
+                        style="padding:5px 10px; width:90%; background:black; color:#fff; border:none;"
+                        onclick="location.href=' <?php echo $write_href.'&type=A' ?>';">3.강의
+                        등록</button>
+                </li>
+                <li style="width:100px;">
+                    <button type="button"
+                        style="padding:5px 10px; width:90%; background:black; color:#fff; border:none;"
+                        onclick="location.href=' <?php echo $write_href.'&type=B' ?>';">4.해설
+                        등록</button>
+                </li>
+
+                <!-- 
                 <?php if ($admin_href) { ?><li><a href="<?php echo $admin_href ?>" class="btn_admin btn" title="관리자"><i
                             class="fa fa-cog fa-spin fa-fw"></i><span class="sound_only">관리자</span></a></li><?php } ?>
                 <?php if ($rss_href) { ?><li><a href="<?php echo $rss_href ?>" class="btn_b01 btn" title="RSS"><i
@@ -58,7 +83,7 @@ add_stylesheet('<link rel="stylesheet" href="'.$board_skin_url.'/style.css">', 0
                 </li>
                 <?php if ($write_href) { ?><li><a href="<?php echo $write_href ?>" class="btn_b01 btn" title="글쓰기"><i
                             class="fa fa-pencil" aria-hidden="true"></i><span class="sound_only">글쓰기</span></a></li>
-                <?php } ?>
+                <?php } ?> -->
                 <?php if ($is_admin == 'super' || $is_auth) {  ?>
                 <li>
                     <button type="button" class="btn_more_opt is_list_btn btn_b01 btn" title="게시판 리스트 옵션"><i
@@ -181,7 +206,7 @@ add_stylesheet('<link rel="stylesheet" href="'.$board_skin_url.'/style.css">', 0
         <!-- 페이지 -->
         <?php echo $write_pages; ?>
         <!-- 페이지 -->
-
+        <!-- 
         <?php if ($list_href || $is_checkbox || $write_href) { ?>
         <div class="bo_fx">
             <?php if ($list_href || $write_href) { ?>
@@ -197,7 +222,7 @@ add_stylesheet('<link rel="stylesheet" href="'.$board_skin_url.'/style.css">', 0
             </ul>
             <?php } ?>
         </div>
-        <?php } ?>
+        <?php } ?> -->
     </form>
 
     <!-- 게시판 검색 시작 { -->

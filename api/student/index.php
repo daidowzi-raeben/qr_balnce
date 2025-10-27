@@ -1,6 +1,16 @@
 <?php
 include_once('./_common.php');
 include_once('./head.php');
+$sql_start = "
+select * from qr_write_{$bo_table} where wr_4 = 'F' order by wr_id desc limit 1
+";
+$result_start = $sql_start;
+$row_start = sql_fetch($result_start);
+
+$sql_file_0 = "select * from qr_board_file where wr_id = '{$row_start['wr_id']}' order by bf_no asc limit 1,1 ";
+$row_file_0 = sql_fetch($sql_file_0);
+$img_0 = G5_DATA_URL . "/file/" . $bo_table . "/". $row_file_0['bf_file'];
+
 ?>
 <script>
 const onclickSubmit = () => {
@@ -16,6 +26,13 @@ const onclickSubmit = () => {
     document.getElementById('form').submit()
 }
 </script>
+<?php if(!$start) { ?>
+<div>
+    <a href="/student/?bo_table=<?php echo $bo_table?>&start=1">
+        <img src="<?php echo $img_0; ?>" width="100%">
+    </a>
+</div>
+<?php } else {?>
 <div class="">
     <div class="title">
         사번 및 닉네임 입력
@@ -47,3 +64,4 @@ const onclickSubmit = () => {
         </form>
     </div>
 </div>
+<?php } ?>

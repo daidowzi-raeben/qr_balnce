@@ -131,9 +131,17 @@ body {
 
 
 <?php
-$sql = " select * from qr_write_".$bo_table." limit $num, 1  ";
+// if(!$num) $num =0;
+$sql = " select * from qr_write_".$bo_table." where wr_4 = 'A' limit $num, 1  ";
 $result = $sql;
 $row = sql_fetch($result);
+
+
+$sql_bb = " select * from qr_write_".$bo_table." where wr_4 = 'B' limit $num, 1  ";
+$result_bb = $sql_bb;
+$row_bb = sql_fetch($result_bb);
+
+
 
 $sql_file_1 = "select * from qr_board_file where wr_id = '{$row['wr_id']}' order by bf_no asc limit 0,1 ";
 $row_file_1 = sql_fetch($sql_file_1);
