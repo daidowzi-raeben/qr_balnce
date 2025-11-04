@@ -249,18 +249,21 @@ if(!$type) $type = $wr_4;
 
         <?php if($type == 'F') { ?>
         <?php 
-            for ($i=0; $is_file && $i<4; $i++) { ?>
+            for ($i=0; $is_file && $i<5; $i++) { ?>
 
         <div class="bo_w_select write_div" style=" display:flex;">
-            <?php if ($is_file_content && $i < '2') { ?>
-            <div style="min-width:70px; margin-top:21px;">인트로 디자인 이미지
-                <?php if($i == '0') { echo 'PC'; } else { echo '모바일';} ?></div>
+            <div style="min-width:70px; margin-top:21px;">
+                <?php 
+            
+            if($i == '0') { echo '인트로 디자인 이미지 PC'; } 
+            if($i == '1') { echo '인트로 디자인 이미지 모바일'; } 
+            if($i == '2') { echo '갈림길 디자인 이미지 PC'; } 
+            if($i == '3') { echo '수고하셨습니다 디자인 이미지 PC'; } 
+            if($i == '4') { echo '수고하셨습니다 디자인 이미지 모바일'; } 
+            
+            ?>
+            </div>
             <label for="wr_subject" class="sound_only">제목<strong>필수</strong></label>
-            <?php } else {?>
-            <div style="min-width:70px; margin-top:21px;">갈림길 디자인 이미지
-                <?php if($i == '0') { echo 'PC'; } else { echo '모바일';} ?></div>
-            <label for="wr_subject" class="sound_only">제목<strong>필수</strong></label>
-            <?php }?>
         </div>
         <div class="bo_w_flie write_div">
             <div class="file_wr write_div">

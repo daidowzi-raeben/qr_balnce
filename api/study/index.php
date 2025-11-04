@@ -2,6 +2,9 @@
 include_once('./_common.php');
 include_once('./head.php');
 
+
+
+
 $sql_start = "
 select * from qr_write_{$bo_table} where wr_4 = 'F' order by wr_id desc limit 1
 ";
@@ -82,15 +85,21 @@ html {
 <div style="text-align:center;">
     <div class="Isamanru" style="color: #2c57fb;
     position: absolute;
-    margin-top: 435px;
     z-index: 99;
     font-size: 57px;
-    left: 906px;
+     top: 50%; 
+    left: 50%;
+    transform: translate(-50%,-50%);
+        margin-top: -73px;
+    margin-left: -31px;
     ">
         <?php echo $row_start['wr_2']; ?>
     </div>
     <a href="./?bo_table=<?php echo $bo_table?>&intro=4">
-        <img src="./image/title/3.png" width="1920">
+        <img src="./image/title/3.png" width="1920" style="position: absolute;
+    top: 50%; 
+    left: 50%;
+    transform: translate(-50%,-50%); width:1920px; height:1080px;">
     </a>
 </div>
 <?php }?>

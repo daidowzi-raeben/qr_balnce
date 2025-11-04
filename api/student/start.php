@@ -1,11 +1,40 @@
 <?php
 include_once('./_common.php');
 include_once('./head.php');
+
+$che = "
+select * from qr_board where bo_table = '{$bo_table}' limit 1
+";
+$chkNum = sql_fetch($che);
+$chkNumConst = $chkNum['bo_1'] == '' ? 0 : $chkNum['bo_1'];
+
+
 ?>
 <script>
-const onclickSubmit = (v) => {
-    location.href =
-        '/student/start.php?bo_table=<?php echo $bo_table?>&id=<?php echo $id?>&num=<?php echo $num?>&chk=' + v;
+const onclickSubmit = async (v) => {
+    const s = Number(<?php echo $num ?>);
+
+    try {
+        const res = await fetch('./chk.php?bo_table=<?php echo $bo_table?>');
+        if (!res.ok) throw new Error('서버 응답 실패');
+
+        const text = await res.text(); // 또는 .json() 사용 가능
+        const g = Number(text);
+
+        console.log('g:', g, 's:', s);
+
+        if (g !== s) {
+            alert('아직 이용할 수 없습니다.');
+            return;
+        }
+
+        location.href =
+            '/student/start.php?bo_table=<?php echo $bo_table ?>&id=<?php echo $id ?>&num=<?php echo $num ?>&chk=' +
+            v;
+
+    } catch (e) {
+        alert('오류가 발생했습니다: ' + e.message);
+    }
 }
 const onclickStart = () => {
     location.href = '/student/start.php?bo_table=<?php echo $bo_table?>&id=<?php echo $id?>&num=0';
@@ -34,10 +63,18 @@ const onclickSubmit2 = () => {
 }
 </script>
 
-<?php if(!$row) { ?>
-<div style="text-align:center;background:#EAF2FF;">
-    <img src="./image/08.png" height="100%">
-</div>
+<?php if(!$row) { 
+$sql_start = "
+select * from qr_write_{$bo_table} where wr_4 = 'F' order by wr_id desc limit 1
+";
+$result_start = $sql_start;
+$row_start = sql_fetch($result_start);
+$sql_file_0 = "select * from qr_board_file where wr_id = '{$row_start['wr_id']}' order by bf_no asc limit 4,1 ";
+$row_file_0 = sql_fetch($sql_file_0);
+$img_0 = G5_DATA_URL . "/file/" . $bo_table . "/". $row_file_0['bf_file'];
+
+?>
+<img src="<?php echo $img_0;?>" width="100%">
 <?php
 exit;
 }?>

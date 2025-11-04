@@ -1,12 +1,32 @@
 <?php
 include_once('./_common.php');
 include_once('./head.php');
+
+sql_fetch("update qr_board set bo_1 = '{$num}' where bo_table = '{$bo_table}'");
+
+$che = "
+select * from qr_board where bo_table = '{$bo_table}' limit 1
+";
+$chkNum = sql_fetch($che);
+// echo $chkNum['bo_1'];
+
 ?>
 
 
-<?php if(!$row) { ?>
-<img src="./image/08.png" width="100%" height="100%">
+<?php if(!$row) { 
+$sql_start = "
+select * from qr_write_{$bo_table} where wr_4 = 'F' order by wr_id desc limit 1
+";
+$result_start = $sql_start;
+$row_start = sql_fetch($result_start);
+$sql_file_0 = "select * from qr_board_file where wr_id = '{$row_start['wr_id']}' order by bf_no asc limit 3,1 ";
+$row_file_0 = sql_fetch($sql_file_0);
+$img_0 = G5_DATA_URL . "/file/" . $bo_table . "/". $row_file_0['bf_file'];
+
+?>
+<img src="<?php echo $img_0;?>" width="1920">
 <?php
+sql_fetch("update qr_board set bo_1 = '' where bo_table = '{$bo_table}'");
 exit;
 }?>
 
@@ -514,7 +534,7 @@ window.location.href =
 <?php if($start == 0) { ?>
 <div class="content">
     <div class="step">
-        <?php echo $row['wr_7'] ?> <?php echo $num + 1; ?>
+        <?php echo $row['wr_7'] ?>
     </div>
     <div class="con-title">
         <?php echo $row['wr_subject']?>
