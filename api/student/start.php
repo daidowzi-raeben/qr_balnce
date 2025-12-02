@@ -23,7 +23,7 @@ const onclickSubmit = async (v) => {
 
         console.log('g:', g, 's:', s);
 
-        if (g !== s) {
+        if (g !== s || g == 's') {
             alert('아직 이용할 수 없습니다.');
             return;
         }
@@ -39,7 +39,24 @@ const onclickSubmit = async (v) => {
 const onclickStart = () => {
     location.href = '/student/start.php?bo_table=<?php echo $bo_table?>&id=<?php echo $id?>&num=0';
 }
-const onclickStart2 = () => {
+const onclickStart2 = async () => {
+
+    const s = Number(<?php echo $num ?>);
+    const res = await fetch('./chk.php?bo_table=<?php echo $bo_table?>');
+    if (!res.ok) throw new Error('서버 응답 실패');
+
+    const text = await res.text(); // 또는 .json() 사용 가능
+    const g = Number(text);
+
+    console.log('g:', g, 's:', s);
+
+    if (g !== s || g == 's') {
+        alert('아직 이용할 수 없습니다.');
+        return;
+    }
+
+
+
     const el = document.getElementById("wait");
     if (!el) return;
 
